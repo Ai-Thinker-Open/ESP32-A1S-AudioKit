@@ -1,42 +1,41 @@
-# 安信可音频开发板 SDK 框架
+
+# Ai-Thinker AudioKit Board SDK
 
 
-本框架是基于乐鑫音频框架 esp-adf 上二次开发并遵循官方开源协议，如有侵犯，请联系我们。
-
-## 总览
-
-本框架同样适合乐鑫的官方开发板比如esp-lyart，还以最全面的方式轻松添加功能，从简单到复杂开发音频应用程序：
-
-- 音乐播放器或录音机支持音频格式，例如MP3，AAC，FLAC，WAV，OGG，OPUS，AMR，TS，EQ，Downmixer，Sonic，ALC，G.711 ...
-- 从以下来源播放音乐：HTTP，HLS（HTTP实时流），SPIFFS，SDCARD，A2DP来源，A2DP接收器，HFP ...
-- 集成媒体服务，例如：DLNA，VoIP ...
-- 网络广播
-- 语音识别以及与Alexa，DuerOS等在线服务的集成...
-
-## 使用ESP-ADF进行开发
-
-### 快速开始
-
-**注意**：如果您是第一次接触ESP32和ESP-IDF，请参考我们的 安信可一体化环境IDE搭建；
-
-克隆 AiThinker-esp32-A1s-AudioKit 仓库，设置ADF_PATH路径和IDF路径，然后以与使用ESP-IDF相同的方式编译，刷新和监视应用程序。
+EN | [中文](./README-zh.md)
 
 
-开始克隆，尤其带子模块克隆：
-``` bash
-git clone --recursive https://gitee.com/xuhongv/AiThinker-esp32-A1s-AudioKit.git
-``` 
+- GitHub：https://github.com/Ai-Thinker-Open/ESP32-A1S-AudioKit.git
+- Gitee：https://gitee.com/xuhongv/AiThinker-esp32-A1s-AudioKit
 
-之后注意设置的IDF路径为仓库下的 idf 目录，比如：
+This framework is based on the second development of the ESPRESSIF audio framework esp-adf and follows the official open source agreement
 
-``` bash
-export ADF_PATH="~/esp32-a1s-adf"
-export IDF_PATH="~/esp32-a1s-adf/esp-idf"
+## Overview
+
+The framework is also suitable for the company's official development board such as esp-lyart, which also easily adds functions in the most comprehensive way, from simple to complex development of audio applications
+
+- Music player or recorder supports audio formats such as MP3, AAC, FLAC, WAV, OGG, OPUS, AMR, TS, EQ, Downmixer, Sonic, ALC, G.711...
+- Play music from sources: HTTP, HLS(HTTP Live Streaming), SPIFFS, SDCARD,  A2DP-Source, A2DP-Sink, HFP ...
+- Integrate Media services such as: DLNA, VoIP ...
+- Internet Radio
+- Voice recognition and integration with online services such as Alexa, DuerOS, ...
+
+## Developing with the ESP-ADF
+
+### Quick Start
+
+
+You need [version 3.3.1 of ESP-IDF](https://docs.espressif.com/projects/esp-idf/en/v3.3.1/versions.html) to provide the toolchain, the ESP32-LyraT board and headphone connected.
+
+**Note:**  If this is your first exposure to ESP32 and ESP-IDF, proceed to [Getting Started](https://docs.espressif.com/projects/esp-idf/en/v3.3.1/get-started/index.html) documentation.
+
+Clone the ESP-ADF repository, set up `ADF_PATH`, and then compile, flash and monitor applications in the same way as when working with ESP-IDF.
+
 ```
-开始编译并烧录到开发板，比如：
-
-``` bash
+git clone --recursive https://github.com/Ai-Thinker-Open/ESP32-A1S-AudioKit.git
 cd esp-adf/ai-examples/get-started/play_mp3
 make menuconfig
 make flash monitor
-``` 
+```
+
+If you clone project without `--recursive` flag, please goto the `esp-adf` directory and run command `git submodule update --init` before doing anything.
