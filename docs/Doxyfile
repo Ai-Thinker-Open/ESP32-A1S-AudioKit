@@ -1,0 +1,167 @@
+# This is Doxygen configuration file
+#
+# Doxygen provides over 260 configuration statements
+# To make this file easier to follow,
+# it contains only statements that are non-default
+#
+# NOTE:
+# It is recommended not to change defaults unless specifically required
+# Test any changes how they affect generated documentation
+# Make sure that correct warnings are generated to flag issues with documented code
+#
+# For the complete list of configuration statements see:
+# https://www.stack.nl/~dimitri/doxygen/manual/config.html
+
+
+PROJECT_NAME = "Espressif Audio Development Framework (ESP-ADF)"
+
+## The 'INPUT' statement below is used as input by script 'gen-df-input.py'
+## to automatically generate API reference list files heder_file.inc
+## These files are placed in '_inc' directory
+## and used to include in API reference documentation
+
+INPUT = \
+    ## Audio Pipeline
+    ../../components/audio_pipeline/include/audio_element.h \
+    ../../components/audio_pipeline/include/audio_pipeline.h \
+    ../../components/audio_pipeline/include/audio_event_iface.h \
+    ../../components/audio_pipeline/include/audio_common.h \
+    ../../components/audio_pipeline/include/ringbuf.h \
+    ## Audio Stream
+    ../../components/audio_stream/include/fatfs_stream.h \
+    ../../components/audio_stream/include/http_stream.h \
+    ../../components/audio_stream/include/i2s_stream.h \
+    ../../components/audio_stream/include/raw_stream.h \
+    ../../components/audio_stream/include/spiffs_stream.h \
+    ../../components/audio_stream/include/algorithm_stream.h \
+    ## ESP Codec
+    ../../components/esp-adf-libs/esp_codec/include/codec/esp_decoder.h \
+    ../../components/esp-adf-libs/esp_codec/include/codec/audio_type_def.h \
+    ## ESP Codec - Decoder
+    ../../components/esp-adf-libs/esp_codec/include/codec/aac_decoder.h \
+    ../../components/esp-adf-libs/esp_codec/include/codec/amr_decoder.h \
+    ../../components/esp-adf-libs/esp_codec/include/codec/flac_decoder.h \
+    ../../components/esp-adf-libs/esp_codec/include/codec/mp3_decoder.h \
+    ../../components/esp-adf-libs/esp_codec/include/codec/ogg_decoder.h \
+    ../../components/esp-adf-libs/esp_codec/include/codec/opus_decoder.h \
+    ../../components/esp-adf-libs/esp_codec/include/codec/wav_decoder.h \
+    ## ESP Codec - Encoder
+    ../../components/esp-adf-libs/esp_codec/include/codec/amrnb_encoder.h \
+    ../../components/esp-adf-libs/esp_codec/include/codec/amrwb_encoder.h \
+    ../../components/esp-adf-libs/esp_codec/include/codec/wav_encoder.h \
+    ## ESP Codec - Auto
+    ../../components/esp-adf-libs/esp_codec/include/codec/auto_aac_dec.h \
+    ../../components/esp-adf-libs/esp_codec/include/codec/auto_amr_dec.h \
+    ../../components/esp-adf-libs/esp_codec/include/codec/auto_flac_dec.h \
+    ../../components/esp-adf-libs/esp_codec/include/codec/auto_mp3_dec.h \
+    ../../components/esp-adf-libs/esp_codec/include/codec/auto_ogg_dec.h \
+    ../../components/esp-adf-libs/esp_codec/include/codec/auto_opus_dec.h \
+    ../../components/esp-adf-libs/esp_codec/include/codec/auto_wav_dec.h \
+    ## Audio Processing
+    ../../components/esp-adf-libs/esp_codec/include/processing/wav_head.h \
+    ../../components/esp-adf-libs/esp_codec/include/processing/esp_downmix.h \
+    ../../components/esp-adf-libs/esp_codec/include/processing/esp_equalizer.h \
+    ../../components/esp-adf-libs/esp_codec/include/processing/esp_resample.h \
+    ../../components/esp-adf-libs/esp_codec/include/processing/esp_sonic.h \
+    ## Audio Processing Wrappers
+    ../../components/esp-adf-libs/esp_codec/include/codec/downmix.h \
+    ../../components/esp-adf-libs/esp_codec/include/codec/equalizer.h \
+    ../../components/esp-adf-libs/esp_codec/include/codec/filter_resample.h \
+    ../../components/esp-adf-libs/esp_codec/include/codec/audio_sonic.h \
+    ## Speech Recognition
+    ../../components/esp-adf-libs/recorder_engine/include/recorder_engine.h \
+    ## ESP Audio
+    ../../components/esp-adf-libs/esp_audio/include/audio_def.h \
+    ../../components/esp-adf-libs/esp_audio/include/esp_audio.h \
+    ## Common Peripherals
+    ../../components/esp_peripherals/include/esp_peripherals.h \
+    ../../components/esp_peripherals/include/periph_sdcard.h \
+    ../../components/esp_peripherals/include/periph_touch.h \
+    ../../components/esp_peripherals/include/periph_button.h \
+    ../../components/esp_peripherals/include/periph_led.h \
+    ../../components/esp_peripherals/include/periph_wifi.h \
+    ../../components/esp_peripherals/include/periph_console.h \
+    ../../components/esp_peripherals/include/periph_spiffs.h \
+    ../../components/esp_peripherals/include/periph_is31fl3216.h \
+    ../../components/esp_peripherals/include/periph_adc_button.h \
+    ## Audio HAL
+    ../../components/audio_board/include/board_pins_config.h \
+    ../../components/audio_hal/driver/es8388/es8388.h \
+    ../../components/audio_hal/driver/es8374/es8374.h \
+    ../../components/audio_hal/driver/zl38063/zl38063.h \
+    ../../components/audio_hal/include/audio_hal.h \
+    ## Audio SAL
+    ../../components/audio_sal/include/audio_mutex.h \
+    ../../components/audio_sal/include/audio_mem.h \
+    ## Services
+    ../../components/bluetooth_service/include/bluetooth_service.h \
+    ../../components/bluetooth_service/include/hfp_stream.h \
+    ../../components/bluetooth_service/include/bt_keycontrol.h \
+    ../../components/bluetooth_service/include/a2dp_stream.h \
+    ../../components/input_key_service/include/input_key_service.h \
+    ../../components/dueros_service/include/dueros_service.h \
+    ../../components/display_service/include/display_service.h \
+    ## Dispatcher framwork
+    ../../components/esp_dispatcher/include/periph_service.h \
+    ../../components/esp_dispatcher/include/audio_service.h \
+    ../../components/display_service/include/display_service.h \
+    ## Cloud Services
+    ../../components/wifi_service/include/airkiss_config.h \
+    ../../components/wifi_service/include/blufi_config.h \
+    ../../components/wifi_service/include/smart_config.h \
+    ../../components/wifi_service/include/esp_wifi_setting.h \
+    ../../components/wifi_service/include/wifi_service.h \
+    ## Playlist
+    ../../components/playlist/include/dram_list.h \
+    ../../components/playlist/include/flash_list.h \
+    ../../components/playlist/include/partition_list.h \
+    ../../components/playlist/include/sdcard_list.h \
+    ../../components/playlist/include/playlist.h \
+    ../../components/playlist/include/sdcard_scan.h \
+    ##
+    ## Audio Player
+    ##
+
+
+## Get warnings for functions that have no documentation for their parameters or return value
+##
+WARN_NO_PARAMDOC = YES
+
+## Enable preprocessing and remove __attribute__(...) expressions from the INPUT files
+##
+ENABLE_PREPROCESSING   = YES
+MACRO_EXPANSION        = YES
+EXPAND_ONLY_PREDEF     = YES
+PREDEFINED             = \
+    __attribute__(x)= \
+    IRAM_ATTR= \
+    configSUPPORT_DYNAMIC_ALLOCATION=1 \
+    configSUPPORT_STATIC_ALLOCATION=1 \
+    configQUEUE_REGISTRY_SIZE=1 \
+    configUSE_RECURSIVE_MUTEXES=1 \
+    configTHREAD_LOCAL_STORAGE_DELETE_CALLBACKS=1 \
+    configNUM_THREAD_LOCAL_STORAGE_POINTERS=1 \
+    configUSE_APPLICATION_TASK_TAG=1
+
+## Do not complain about not having dot
+##
+HAVE_DOT = NO
+
+## Generate XML that is required for Breathe
+##
+GENERATE_XML    = YES
+XML_OUTPUT      = xml
+
+GENERATE_HTML   = NO
+HAVE_DOT        = NO
+GENERATE_LATEX  = NO
+GENERATE_MAN    = YES
+GENERATE_RTF    = NO
+
+## Skip distracting progress messages
+##
+QUIET = YES
+## Log warnings in a file for further review
+##
+WARN_LOGFILE = "doxygen-warning-log.txt"
+

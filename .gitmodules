@@ -1,0 +1,12 @@
+[submodule "esp-idf"]
+	path = esp-idf
+	url = https://github.com/espressif/esp-idf
+[submodule "components/esp-adf-libs"]
+	path = components/esp-adf-libs
+	url = https://github.com/espressif/esp-adf-libs.git
+[submodule "components/esp-sr"]
+	path = components/esp-sr
+	url = https://github.com/espressif/esp-sr.git
+[submodule "micropython_adf/micropython"]
+	path = micropython_adf/micropython
+	url = https://github.com/micropython/micropython.git
