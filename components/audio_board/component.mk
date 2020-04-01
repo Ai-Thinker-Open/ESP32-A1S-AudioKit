@@ -32,6 +32,11 @@ COMPONENT_ADD_INCLUDEDIRS += ./lyrat_mini_v1_1
 COMPONENT_SRCDIRS += ./lyrat_mini_v1_1
 endif
 
+ifdef CONFIG_ESP32_KORVO_DU1906_BOARD
+COMPONENT_ADD_INCLUDEDIRS += ./esp32_korvo_du1906
+COMPONENT_SRCDIRS += ./esp32_korvo_du1906
+endif
+
 ifdef CONFIG_ESP_AI_THINKER_V2_2_BOARD
 COMPONENT_ADD_INCLUDEDIRS += ./ai_thinker_audio_kit_v2_2
 COMPONENT_SRCDIRS += ./ai_thinker_audio_kit_v2_2
