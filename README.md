@@ -6,7 +6,7 @@ EN | [中文](./README-zh.md)
 
 
 - GitHub：https://github.com/Ai-Thinker-Open/ESP32-A1S-AudioKit.git
-- Gitee：https://gitee.com/xuhongv/AiThinker-esp32-A1s-AudioKit
+- Gitee：https://gitee.com/xuhongv/ESP32-A1S-AudioKit
 
 This framework is based on the second development of the ESPRESSIF audio framework esp-adf and follows the official open source agreement
 
