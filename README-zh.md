@@ -4,7 +4,7 @@
 
 
 - GitHub：https://github.com/Ai-Thinker-Open/ESP32-A1S-AudioKit.git
-- Gitee 码市：https://gitee.com/xuhongv/AiThinker-esp32-A1s-AudioKit
+- Gitee 码市：https://gitee.com/xuhongv/ESP32-A1S-AudioKit
 
 本框架是基于乐鑫音频框架 esp-adf 上二次开发并遵循官方开源协议，如有侵犯，请联系我们。
 
@@ -29,7 +29,7 @@
 
 开始克隆，尤其带子模块克隆：
 ``` bash
-git clone --recursive https://gitee.com/xuhongv/AiThinker-esp32-A1s-AudioKit.git
+git clone --recursive https://gitee.com/xuhongv/ESP32-A1S-AudioKit
 ``` 
 
 之后注意设置的IDF路径为仓库下的 idf 目录，比如：
