@@ -37,7 +37,13 @@ COMPONENT_ADD_INCLUDEDIRS += ./esp32_korvo_du1906
 COMPONENT_SRCDIRS += ./esp32_korvo_du1906
 endif
 
+ifdef CONFIG_ESP32_S2_KALUGA_1_V1_2_BOARD
+COMPONENT_ADD_INCLUDEDIRS += ./esp32_s2_kaluga_1_v1_2
+COMPONENT_SRCDIRS += ./esp32_s2_kaluga_1_v1_2
+endif
+
 ifdef CONFIG_ESP_AI_THINKER_V2_2_BOARD
 COMPONENT_ADD_INCLUDEDIRS += ./ai_thinker_audio_kit_v2_2
 COMPONENT_SRCDIRS += ./ai_thinker_audio_kit_v2_2
 endif
+

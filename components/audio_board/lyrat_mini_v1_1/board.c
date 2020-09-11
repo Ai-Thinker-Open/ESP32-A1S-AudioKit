@@ -110,7 +110,7 @@ display_service_handle_t audio_board_blue_led_init(void)
 esp_err_t audio_board_key_init(esp_periph_set_handle_t set)
 {
     esp_err_t ret = ESP_OK;
-    periph_adc_button_cfg_t adc_btn_cfg = {0};
+    periph_adc_button_cfg_t adc_btn_cfg = PERIPH_ADC_BUTTON_DEFAULT_CONFIG();
     adc_arr_t adc_btn_tag = ADC_DEFAULT_ARR();
     adc_btn_tag.total_steps = 6;
     int btn_array[7] = {190, 600, 1000, 1375, 1775, 2195, 3100};
@@ -142,8 +142,19 @@ esp_err_t audio_board_sdcard_init(esp_periph_set_handle_t set)
     };
     esp_periph_handle_t sdcard_handle = periph_sdcard_init(&sdcard_cfg);
     esp_err_t ret = esp_periph_start(set, sdcard_handle);
-    while (!periph_sdcard_is_mounted(sdcard_handle)) {
-        vTaskDelay(500 / portTICK_PERIOD_MS);
+    int retry_time = 5;
+    bool mount_flag = false;
+    while (retry_time --) {
+        if (periph_sdcard_is_mounted(sdcard_handle)) {
+            mount_flag = true;
+            break;
+        } else {
+            vTaskDelay(500 / portTICK_PERIOD_MS);
+        }
+    }
+    if (mount_flag == false) {
+        ESP_LOGE(TAG, "Sdcard mount failed");
+        return ESP_FAIL;
     }
     return ret;
 }
@@ -158,7 +169,7 @@ esp_err_t audio_board_deinit(audio_board_handle_t audio_board)
     esp_err_t ret = ESP_OK;
     ret |= audio_hal_deinit(audio_board->audio_hal);
     ret |= audio_hal_deinit(audio_board->adc_hal);
-    free(audio_board);
+    audio_free(audio_board);
     board_handle = NULL;
     return ret;
 }

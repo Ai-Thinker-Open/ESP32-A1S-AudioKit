@@ -1,8 +1,8 @@
 /*
  * @Author: your name
  * @Date: 2020-01-26 10:13:06
- * @LastEditTime: 2020-04-01 10:43:07
- * @LastEditors: Please set LastEditors
+ * @LastEditTime : 2020-01-28 19:24:42
+ * @LastEditors  : Please set LastEditors
  * @Description: In User Settings Edit
  * @FilePath: \esp-adf\components\audio_board\aithinker\board_def.h
  */
@@ -58,11 +58,6 @@
 #define TOUCH_VOLUP GPIO_NUM_18
 #define TOUCH_VOLDWN GPIO_NUM_5
 
-#define BUTTON_SET_ID TOUCH_SET
-#define BUTTON_PLAY_ID TOUCH_PLAY
-#define BUTTON_VOLUP_ID TOUCH_VOLUP
-#define BUTTON_VOLDOWN_ID TOUCH_VOLDWN
-
 extern audio_hal_func_t AUDIO_CODEC_AC101_CODEC_HANDLE;
 
 #define AUDIO_CODEC_DEFAULT_CONFIG() {       \
@@ -77,41 +72,4 @@ extern audio_hal_func_t AUDIO_CODEC_AC101_CODEC_HANDLE;
     },                                       \
 };
 
-#define INPUT_KEY_NUM     6
-
-#define INPUT_KEY_DEFAULT_INFO() {                      \
-     {                                                  \
-        .type = PERIPH_ID_ADC_BTN,                      \
-        .user_id = INPUT_KEY_USER_ID_REC,               \
-        .act_id = BUTTON_REC_ID,                        \
-    },                                                  \
-    {                                                   \
-        .type = PERIPH_ID_ADC_BTN,                      \
-        .user_id = INPUT_KEY_USER_ID_MODE,              \
-        .act_id = BUTTON_MODE_ID,                       \
-    },                                                  \
-    {                                                   \
-        .type = PERIPH_ID_ADC_BTN,                      \
-        .user_id = INPUT_KEY_USER_ID_SET,               \
-        .act_id = BUTTON_SET_ID,                        \
-    },                                                  \
-    {                                                   \
-        .type = PERIPH_ID_ADC_BTN,                      \
-        .user_id = INPUT_KEY_USER_ID_PLAY,              \
-        .act_id = BUTTON_PLAY_ID,                       \
-    },                                                  \
-    {                                                   \
-        .type = PERIPH_ID_ADC_BTN,                      \
-        .user_id = INPUT_KEY_USER_ID_VOLUP,             \
-        .act_id = BUTTON_VOLUP_ID,                      \
-    },                                                  \
-    {                                                   \
-        .type = PERIPH_ID_ADC_BTN,                      \
-        .user_id = INPUT_KEY_USER_ID_VOLDOWN,           \
-        .act_id = BUTTON_VOLDOWN_ID,                    \
-    }                                                   \
-}
-
 #endif
-
-

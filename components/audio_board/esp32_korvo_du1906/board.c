@@ -47,9 +47,9 @@ audio_board_handle_t audio_board_init(void)
     board_handle = (audio_board_handle_t) audio_calloc(1, sizeof(struct audio_board_handle));
     AUDIO_MEM_CHECK(TAG, board_handle, return NULL);
     board_handle->audio_hal = audio_board_dac_init();
-    es7243_adc_set_addr(0x20);
+    es7243_adc_set_addr(0x24);
     board_handle->adc_line_in_hal = audio_board_adc_init();
-    es7243_adc_set_addr(0x22);
+    es7243_adc_set_addr(0x26);
     board_handle->adc_ref_pa_hal = audio_board_adc_init();
     return board_handle;
 }
@@ -106,11 +106,12 @@ display_service_handle_t audio_board_led_init(void)
 esp_err_t audio_board_key_init(esp_periph_set_handle_t set)
 {
     esp_err_t ret = ESP_OK;
-    periph_adc_button_cfg_t adc_btn_cfg = {0};
+    periph_adc_button_cfg_t adc_btn_cfg = PERIPH_ADC_BUTTON_DEFAULT_CONFIG();
+    adc_btn_cfg.task_cfg.ext_stack = true;
     adc_arr_t adc_btn_tag = ADC_DEFAULT_ARR();
     adc_btn_tag.adc_ch = ADC1_CHANNEL_0; // GPIO36
     adc_btn_tag.total_steps = 4;
-    int btn_array[5] = {200, 1355, 1820, 2280, 2930};
+    int btn_array[5] = {200, 900, 1500, 2100, 2930};
     adc_btn_tag.adc_level_step = btn_array;
     adc_btn_cfg.arr = &adc_btn_tag;
     adc_btn_cfg.arr_size = 1;
@@ -128,8 +129,19 @@ esp_err_t audio_board_sdcard_init(esp_periph_set_handle_t set)
     };
     esp_periph_handle_t sdcard_handle = periph_sdcard_init(&sdcard_cfg);
     esp_err_t ret = esp_periph_start(set, sdcard_handle);
-    while (!periph_sdcard_is_mounted(sdcard_handle)) {
-        vTaskDelay(500 / portTICK_PERIOD_MS);
+    int retry_time = 5;
+    bool mount_flag = false;
+    while (retry_time --) {
+        if (periph_sdcard_is_mounted(sdcard_handle)) {
+            mount_flag = true;
+            break;
+        } else {
+            vTaskDelay(500 / portTICK_PERIOD_MS);
+        }
+    }
+    if (mount_flag == false) {
+        ESP_LOGE(TAG, "Sdcard mount failed");
+        return ESP_FAIL;
     }
     return ret;
 }
@@ -143,7 +155,7 @@ esp_err_t audio_board_deinit(audio_board_handle_t audio_board)
 {
     esp_err_t ret = ESP_OK;
     ret |= audio_hal_deinit(audio_board->audio_hal);
-    free(audio_board);
+    audio_free(audio_board);
     board_handle = NULL;
     return ret;
 }

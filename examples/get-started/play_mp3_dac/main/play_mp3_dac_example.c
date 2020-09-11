@@ -69,7 +69,8 @@ void app_main(void)
     audio_pipeline_register(pipeline, i2s_stream_writer, "i2s");
 
     ESP_LOGI(TAG, "[1.4] Link it together [mp3_music_read_cb]-->mp3_decoder-->i2s_stream-->[ESP32 DAC]");
-    audio_pipeline_link(pipeline, (const char *[]) {"mp3", "i2s"}, 2);
+    const char *link_tag[2] = {"mp3", "i2s"};
+    audio_pipeline_link(pipeline, &link_tag[0], 2);
 
     ESP_LOGI(TAG, "[ 2 ] Set up  event listener");
     audio_event_iface_cfg_t evt_cfg = AUDIO_EVENT_IFACE_DEFAULT_CFG();
@@ -110,6 +111,8 @@ void app_main(void)
     }
 
     ESP_LOGI(TAG, "[ 4 ] Stop audio_pipeline");
+    audio_pipeline_stop(pipeline);
+    audio_pipeline_wait_for_stop(pipeline);
     audio_pipeline_terminate(pipeline);
 
     audio_pipeline_unregister(pipeline, mp3_decoder);

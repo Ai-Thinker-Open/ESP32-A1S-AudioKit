@@ -63,18 +63,26 @@ typedef struct {
     int                         task_stack;             /*!< >0 Service task stack; =0 with out task created */
     int                         task_prio;              /*!< Service task priority (based on freeRTOS priority) */
     int                         task_core;              /*!< Service task running in core (0 or 1) */
+    bool                        extern_stack;           /*!< Task stack allocate on the extern ram */
     periph_service_cb           evt_cb;                 /*!< Service callback function */
     void                        *cb_ctx;                /*!< Callback context */
     char                        *user_data;             /*!< User data */
     int                         setting_timeout_s;      /*!< Timeout of setting WiFi */
+    int                         max_retry_time;         /*!< Maximum times of reconnection */
+    uint8_t                     max_ssid_num;           /*!< Maximum ssid that can be stored */
 } wifi_service_config_t;
 
 #define WIFI_SERVICE_DEFAULT_CONFIG() { \
     .task_stack = 3*1024, \
     .task_prio = 6, \
     .task_core = 0, \
+    .extern_stack = true, \
+    .evt_cb = NULL, \
+    .cb_ctx = NULL, \
     .user_data = NULL, \
     .setting_timeout_s = 60, \
+    .max_retry_time = 5,\
+    .max_ssid_num = 5, \
 }
 
 /*
@@ -127,6 +135,19 @@ esp_err_t wifi_service_register_setting_handle(periph_service_handle_t handle, e
 esp_err_t wifi_service_setting_start(periph_service_handle_t handle, int index);
 
 /*
+ * @brief Update ssid and password and connect to the ap.
+ * @Note  It works only after the wifi service task runs up.
+ *
+ * @param handle  The periph_service_handle_t instance
+ * @param info    A pointer to wifi_config_t
+ *
+ * @return
+ *     - ESP_OK, Success
+ *     - Others, Fail
+ */
+esp_err_t wifi_service_update_sta_info(periph_service_handle_t handle, wifi_config_t *wifi_conf);
+
+/*
  * @brief Stop setting with given index
  *
  * @param handle  The periph_service_handle_t instance
@@ -164,6 +185,7 @@ esp_err_t wifi_service_disconnect(periph_service_handle_t handle);
 
 /*
  * @brief Set the WiFi ssid and password
+ * @Note  The wifi ssid and password is set to connect only when there is no wifi information stored in flash
  *
  * @param handle  The periph_service_handle_t instance
  * @param info    A pointer to wifi_config_t
@@ -193,6 +215,17 @@ periph_service_state_t wifi_service_state_get(periph_service_handle_t handle);
  *
  */
 wifi_service_disconnect_reason_t wifi_service_disconnect_reason_get(periph_service_handle_t handle);
+
+/*
+ * @brief Erase all the ssid information stored in ssid manager
+ *
+ * @param handle  The periph_service_handle_t instance
+ *
+ * @return
+ *     - ESP_OK, Success
+ *     - Others, Fail
+ */
+esp_err_t wifi_service_erase_ssid_manager_info(periph_service_handle_t handle);
 
 #ifdef __cplusplus
 }

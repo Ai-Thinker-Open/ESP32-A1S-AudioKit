@@ -75,6 +75,8 @@ static esp_err_t input_key_service_cb(periph_service_handle_t handle, periph_ser
                 ESP_LOGI(TAG, "[ * ] [Set] input key event");
                 ESP_LOGI(TAG, "[ * ] Stopped, advancing to the next song");
                 char *url = NULL;
+                audio_pipeline_stop(pipeline);
+                audio_pipeline_wait_for_stop(pipeline);
                 audio_pipeline_terminate(pipeline);
                 sdcard_list_next(sdcard_list_handle, 1, &url);
                 ESP_LOGW(TAG, "URL: %s", url);
@@ -140,7 +142,9 @@ void app_main(void)
 
     ESP_LOGI(TAG, "[ 3 ] Create and start input key service");
     input_key_service_info_t input_key_info[] = INPUT_KEY_DEFAULT_INFO();
-    periph_service_handle_t input_ser = input_key_service_create(set);
+    input_key_service_cfg_t input_cfg = INPUT_KEY_SERVICE_DEFAULT_CONFIG();
+    input_cfg.handle = set;
+    periph_service_handle_t input_ser = input_key_service_create(&input_cfg);
     input_key_service_add_key(input_ser, input_key_info, INPUT_KEY_NUM);
     periph_service_set_callback(input_ser, input_key_service_cb, (void *)board_handle);
 
@@ -182,7 +186,8 @@ void app_main(void)
     audio_pipeline_register(pipeline, i2s_stream_writer, "i2s");
 
     ESP_LOGI(TAG, "[4.6] Link it together [sdcard]-->fatfs_stream-->mp3_decoder-->resample-->i2s_stream-->[codec_chip]");
-    audio_pipeline_link(pipeline, (const char *[]) {"file", "mp3", "filter", "i2s"}, 4);
+    const char *link_tag[4] = {"file", "mp3", "filter", "i2s"};
+    audio_pipeline_link(pipeline, &link_tag[0], 4);
 
     ESP_LOGI(TAG, "[5.0] Set up  event listener");
     audio_event_iface_cfg_t evt_cfg = AUDIO_EVENT_IFACE_DEFAULT_CFG();
@@ -241,6 +246,8 @@ void app_main(void)
     }
 
     ESP_LOGI(TAG, "[ 7 ] Stop audio_pipeline");
+    audio_pipeline_stop(pipeline);
+    audio_pipeline_wait_for_stop(pipeline);
     audio_pipeline_terminate(pipeline);
 
     audio_pipeline_unregister(pipeline, mp3_decoder);

@@ -80,7 +80,8 @@ void app_main(void)
     audio_pipeline_register(pipeline, fatfs_stream_writer, "file");
 
     ESP_LOGI(TAG, "[3.5] Link it together [codec_chip]-->i2s_stream-->wav_encoder-->fatfs_stream-->[sdcard]");
-    audio_pipeline_link(pipeline, (const char *[]) {"i2s", "wav", "file"}, 3);
+    const char *link_tag[3] = {"i2s", "wav", "file"};
+    audio_pipeline_link(pipeline, &link_tag[0], 3);
 
     ESP_LOGI(TAG, "[3.6] Set up  uri (file as fatfs_stream, wav as wav encoder)");
     audio_element_set_uri(fatfs_stream_writer, "/sdcard/rec.wav");
@@ -122,6 +123,8 @@ void app_main(void)
         }
     }
     ESP_LOGI(TAG, "[ 7 ] Stop audio_pipeline");
+    audio_pipeline_stop(pipeline);
+    audio_pipeline_wait_for_stop(pipeline);
     audio_pipeline_terminate(pipeline);
 
     audio_pipeline_unregister(pipeline, wav_encoder);

@@ -43,7 +43,7 @@ static esp_err_t input_key_service_cb(periph_service_handle_t handle, periph_ser
                 periph_bt_pause(bt_periph);
                 break;
         }
-    }else if (evt->type == INPUT_KEY_SERVICE_ACTION_PRESS_RELEASE) {
+    } else if (evt->type == INPUT_KEY_SERVICE_ACTION_PRESS_RELEASE) {
         ESP_LOGI(TAG, "[ * ] input key id is %d", (int)evt->data);
         switch ((int)evt->data) {
             case INPUT_KEY_USER_ID_VOLUP:
@@ -85,7 +85,7 @@ void app_main(void)
     ESP_ERROR_CHECK(esp_bluedroid_enable());
 
     esp_bt_dev_set_device_name("ESP_SINK_STREAM_DEMO");
-    
+
     esp_bt_gap_set_scan_mode(ESP_BT_SCAN_MODE_CONNECTABLE_DISCOVERABLE);
 
     ESP_LOGI(TAG, "[ 2 ] Start codec chip");
@@ -122,9 +122,11 @@ void app_main(void)
     audio_element_handle_t filter = rsp_filter_init(&rsp_cfg);
     audio_pipeline_register(pipeline, filter, "filter");
     i2s_stream_set_clk(i2s_stream_writer, 48000, 16, 2);
-    audio_pipeline_link(pipeline, (const char *[]) {"bt", "filter", "i2s"}, 3);
+    const char *link_tag[3] = {"bt", "filter", "i2s"};
+    audio_pipeline_link(pipeline, &link_tag[0], 3);
 #else
-    audio_pipeline_link(pipeline, (const char *[]) {"bt", "i2s"}, 2);
+    const char *link_tag[2] = {"bt", "i2s"};
+    audio_pipeline_link(pipeline, &link_tag[0], 2);
 #endif
 
     ESP_LOGI(TAG, "[ 5 ] Initialize peripherals");
@@ -134,7 +136,9 @@ void app_main(void)
 
     ESP_LOGI(TAG, "[ 5.1 ] Create and start input key service");
     input_key_service_info_t input_key_info[] = INPUT_KEY_DEFAULT_INFO();
-    periph_service_handle_t input_ser = input_key_service_create(set);
+    input_key_service_cfg_t input_cfg = INPUT_KEY_SERVICE_DEFAULT_CONFIG();
+    input_cfg.handle = set;
+    periph_service_handle_t input_ser = input_key_service_create(&input_cfg);
     input_key_service_add_key(input_ser, input_key_info, INPUT_KEY_NUM);
     periph_service_set_callback(input_ser, input_key_service_cb, NULL);
 
@@ -194,6 +198,8 @@ void app_main(void)
     }
 
     ESP_LOGI(TAG, "[ 9 ] Stop audio_pipeline");
+    audio_pipeline_stop(pipeline);
+    audio_pipeline_wait_for_stop(pipeline);
     audio_pipeline_terminate(pipeline);
 
     /* Terminate the pipeline before removing the listener */

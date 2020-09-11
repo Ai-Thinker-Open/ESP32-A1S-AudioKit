@@ -123,7 +123,8 @@ void app_main(void)
     audio_pipeline_register(pipeline, i2s_stream_writer,  "i2s");
 
     ESP_LOGI(TAG, "[2.5] Link it together http_stream-->mp3_decoder-->i2s_stream-->[codec_chip]");
-    audio_pipeline_link(pipeline, (const char *[]) {"http", "mp3", "i2s"}, 3);
+    const char *link_tag[3] = {"http", "mp3", "i2s"};
+    audio_pipeline_link(pipeline, &link_tag[0], 3);
 
     ESP_LOGI(TAG, "[2.6] Set up  uri (http as http_stream, mp3 as mp3 decoder, and default output is i2s)");
     audio_element_set_uri(http_stream_reader, BAIDU_TTS_ENDPOINT);
@@ -174,6 +175,8 @@ void app_main(void)
         }
     }
     ESP_LOGI(TAG, "[ 6 ] Stop audio_pipeline");
+    audio_pipeline_stop(pipeline);
+    audio_pipeline_wait_for_stop(pipeline);
     audio_pipeline_terminate(pipeline);
 
     audio_pipeline_unregister(pipeline, http_stream_reader);
@@ -186,10 +189,10 @@ void app_main(void)
     /* Stop all periph before removing the listener */
     esp_periph_set_stop_all(set);
     audio_event_iface_remove_listener(esp_periph_set_get_event_iface(set), evt);
-  
+
     /* Make sure audio_pipeline_remove_listener & audio_event_iface_remove_listener are called before destroying event_iface */
     audio_event_iface_destroy(evt);
-   
+
     /* Release all resources */
     audio_pipeline_deinit(pipeline);
     audio_element_deinit(http_stream_reader);

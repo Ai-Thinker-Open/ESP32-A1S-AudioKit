@@ -45,12 +45,12 @@ esp_wifi_setting_handle_t esp_wifi_setting_create(const char *tag)
     esp_wifi_setting_handle_t new_entry = audio_calloc(1, sizeof(struct esp_wifi_setting));
     AUDIO_MEM_CHECK(TAG, new_entry, return NULL);
     if (tag) {
-        new_entry->tag = strdup(tag);
+        new_entry->tag = audio_strdup(tag);
     } else {
-        new_entry->tag = strdup("wifi_setting");
+        new_entry->tag = audio_strdup("wifi_setting");
     }
     AUDIO_MEM_CHECK(TAG, new_entry->tag, {
-        free(new_entry);
+        audio_free(new_entry);
         return NULL;
     })
     return new_entry;
@@ -83,8 +83,7 @@ esp_err_t esp_wifi_setting_regitster_notify_handle(esp_wifi_setting_handle_t han
 esp_err_t esp_wifi_setting_info_notify(esp_wifi_setting_handle_t handle, wifi_config_t *info)
 {
     AUDIO_NULL_CHECK(TAG, handle, return ESP_ERR_INVALID_ARG);
-    wifi_service_connect((periph_service_handle_t)handle->notify_handle);
-    wifi_service_set_sta_info((periph_service_handle_t)handle->notify_handle, info);
+    wifi_service_update_sta_info((periph_service_handle_t)handle->notify_handle, info);
     return ESP_OK;
 }
 

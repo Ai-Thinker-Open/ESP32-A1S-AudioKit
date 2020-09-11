@@ -38,7 +38,6 @@
  */
 #define FROM_MCLK_PIN       0
 #define FROM_SCLK_PIN       1
-#define MCLK_SOURCE         1   /* 0 select MCLK   1 select BCLK */
 
 /*
  * to define whether to reverse the clock
@@ -63,6 +62,8 @@ audio_hal_func_t AUDIO_CODEC_ES8311_DEFAULT_HANDLE = {
     .audio_codec_set_mute = es8311_set_voice_mute,
     .audio_codec_set_volume = es8311_codec_set_voice_volume,
     .audio_codec_get_volume = es8311_codec_get_voice_volume,
+    .audio_hal_lock = NULL,
+    .handle = NULL,
 };
 
 /*
@@ -193,6 +194,8 @@ static char *TAG = "DRV8311";
         ESP_LOGE(TAG, format, ##__VA_ARGS__); \
         return b;\
     }
+
+int8_t get_es8311_mclk_src(void);
 
 static esp_err_t es8311_write_reg(uint8_t reg_addr, uint8_t data)
 {
@@ -334,7 +337,7 @@ esp_err_t es8311_codec_init(audio_hal_codec_config_t *codec_cfg)
     /*
      * Select clock source for internal mclk
      */
-    switch (MCLK_SOURCE) {
+    switch (get_es8311_mclk_src()) {
         case FROM_MCLK_PIN:
             regv = es8311_read_reg(ES8311_CLK_MANAGER_REG01);
             regv &= 0x7F;
@@ -412,7 +415,7 @@ esp_err_t es8311_codec_init(audio_hal_codec_config_t *codec_cfg)
                 break;
         }
 
-        if (MCLK_SOURCE == FROM_SCLK_PIN) {
+        if (get_es8311_mclk_src() == FROM_SCLK_PIN) {
             datmp = 3;     /* DIG_MCLK = LRCK * 256 = BCLK * 8 */
         }
         regv |= (datmp) << 3;

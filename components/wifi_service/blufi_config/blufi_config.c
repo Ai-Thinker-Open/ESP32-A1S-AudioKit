@@ -36,6 +36,10 @@ typedef struct wifi_blufi_config {
     uint8_t                 ble_server_if;
     uint16_t                ble_conn_id;
     wifi_config_t           sta_config;
+    bool                    sta_connected_flag;
+    bool                    ble_connected_flag;
+    void                    *user_data;
+    int                     user_data_length;
 } wifi_blufi_config_t;
 
 static const char *TAG = "BLUFI_CONFIG";
@@ -78,11 +82,12 @@ static void wifi_ble_event_callback(esp_blufi_cb_event_t event, esp_blufi_cb_par
             break;
         case ESP_BLUFI_EVENT_BLE_CONNECT:
             ESP_LOGI(TAG, "BLUFI ble connect");
-            // esp_smartconfig_stop();
+            cfg->ble_connected_flag = true;
             cfg->ble_server_if = param->connect.server_if;
             cfg->ble_conn_id = param->connect.conn_id;
             break;
         case ESP_BLUFI_EVENT_BLE_DISCONNECT:
+            cfg->ble_connected_flag = false;
             ESP_LOGI(TAG, "BLUFI ble disconnect");
             break;
         case ESP_BLUFI_EVENT_SET_WIFI_OPMODE:
@@ -91,8 +96,6 @@ static void wifi_ble_event_callback(esp_blufi_cb_event_t event, esp_blufi_cb_par
             break;
         case ESP_BLUFI_EVENT_REQ_CONNECT_TO_AP:
             ESP_LOGI(TAG, "BLUFI request wifi connect to AP");
-            esp_wifi_disconnect(); // ？？？
-
             if (bc_setting_handle) {
                 esp_wifi_setting_info_notify(bc_setting_handle, &cfg->sta_config);
             }
@@ -104,12 +107,17 @@ static void wifi_ble_event_callback(esp_blufi_cb_event_t event, esp_blufi_cb_par
             break;
         case ESP_BLUFI_EVENT_GET_WIFI_STATUS: {
                 wifi_mode_t mode;
-                esp_blufi_extra_info_t info;
+                esp_blufi_extra_info_t info = {0};
                 esp_wifi_get_mode(&mode);
-                memset(&info, 0, sizeof(esp_blufi_extra_info_t));
-                info.sta_bssid_set = true;
-                info.sta_ssid = cfg->sta_config.sta.ssid;
-                esp_blufi_send_wifi_conn_report(mode, ESP_BLUFI_STA_CONN_SUCCESS, 0, &info);
+
+                if (cfg->sta_connected_flag) {
+                    memset(&info, 0, sizeof(esp_blufi_extra_info_t));
+                    info.sta_ssid = cfg->sta_config.sta.ssid;
+                    info.sta_ssid_len = strlen((char *)cfg->sta_config.sta.ssid);
+                    esp_blufi_send_wifi_conn_report(mode, ESP_BLUFI_STA_CONN_SUCCESS, 0, &info);
+                } else {
+                    esp_blufi_send_wifi_conn_report(mode, ESP_BLUFI_STA_CONN_FAIL, 0, NULL);
+                }
                 ESP_LOGI(TAG, "BLUFI get wifi status from AP");
                 break;
             }
@@ -169,10 +177,53 @@ esp_wifi_setting_handle_t blufi_config_create(void *info)
     AUDIO_MEM_CHECK(TAG, bc_setting_handle, return NULL);
     wifi_blufi_config_t *cfg = audio_calloc(1, sizeof(wifi_blufi_config_t));
     AUDIO_MEM_CHECK(TAG, cfg, {
-        free(bc_setting_handle);
+        audio_free(bc_setting_handle);
         return NULL;
     });
     esp_wifi_setting_set_data(bc_setting_handle, cfg);
     esp_wifi_setting_register_function(bc_setting_handle, _ble_config_start, _ble_config_stop, NULL);
     return bc_setting_handle;
+}
+
+esp_err_t blufi_set_sta_connected_flag(esp_wifi_setting_handle_t handle, bool flag)
+{
+    AUDIO_NULL_CHECK(TAG, handle, return ESP_FAIL);
+    wifi_blufi_config_t *blufi_cfg = esp_wifi_setting_get_data(handle);
+    blufi_cfg->sta_connected_flag = flag;
+    return ESP_OK;
+}
+
+esp_err_t blufi_set_customized_data(esp_wifi_setting_handle_t handle, char *data, int data_len)
+{
+    AUDIO_NULL_CHECK(TAG, handle, return ESP_FAIL);
+    AUDIO_NULL_CHECK(TAG, data, return ESP_FAIL);
+    wifi_blufi_config_t *blufi_cfg = esp_wifi_setting_get_data(handle);
+    blufi_cfg->user_data = audio_calloc(1, data_len + 1);
+    blufi_cfg->user_data_length = data_len;
+    AUDIO_MEM_CHECK(TAG, blufi_cfg->user_data, return ESP_FAIL);
+    memcpy(blufi_cfg->user_data, data, data_len);
+    ESP_LOGI(TAG, "Set blufi customized data: %s, length: %d", data, data_len);
+    return ESP_OK;
+}
+
+esp_err_t blufi_send_customized_data(esp_wifi_setting_handle_t handle)
+{
+#ifdef CONFIG_BLUEDROID_ENABLED
+    AUDIO_NULL_CHECK(TAG, handle, return ESP_FAIL);
+    wifi_blufi_config_t *blufi_cfg = esp_wifi_setting_get_data(handle);
+    if (blufi_cfg->ble_connected_flag == false) {
+        ESP_LOGE(TAG, "No Ble device connected, fail to send customized data");
+        return ESP_FAIL;
+    }
+    if (blufi_cfg->user_data && blufi_cfg->user_data_length) {
+        ESP_LOGI(TAG, "Send a string to peer: %s, data len: %d", (char *)blufi_cfg->user_data, blufi_cfg->user_data_length);
+        return esp_blufi_send_custom_data((uint8_t *)blufi_cfg->user_data, blufi_cfg->user_data_length);
+    } else {
+        ESP_LOGW(TAG, "Nothing to be sent, please set customer data first!");
+        return ESP_FAIL;
+    }
+#else
+    ESP_LOGW(TAG, "blufi config selected, but CONFIG_BLUEDROID_ENABLED not enabled");
+    return ESP_FAIL;
+#endif
 }

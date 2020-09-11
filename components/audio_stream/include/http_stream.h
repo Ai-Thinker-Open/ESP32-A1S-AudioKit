@@ -79,6 +79,7 @@ typedef struct {
     int                         task_stack;             /*!< Task stack size */
     int                         task_core;              /*!< Task running in core (0 or 1) */
     int                         task_prio;              /*!< Task priority (based on freeRTOS priority) */
+    bool                        stack_in_ext;           /*!< Try to allocate stack in external memory */
     http_stream_event_handle_t  event_handle;           /*!< The hook function for HTTP Stream */
     void                        *user_data;             /*!< User data context */
     bool                        auto_connect_next_track;/*!< connect next track without open/close */
@@ -92,13 +93,18 @@ typedef struct {
 #define HTTP_STREAM_TASK_PRIO           (4)
 #define HTTP_STREAM_RINGBUFFER_SIZE     (20 * 1024)
 
-#define HTTP_STREAM_CFG_DEFAULT() {\
-    .type = AUDIO_STREAM_READER,\
-    .task_prio = HTTP_STREAM_TASK_PRIO, \
-    .task_core = HTTP_STREAM_TASK_CORE, \
-    .task_stack = HTTP_STREAM_TASK_STACK, \
-    .out_rb_size = HTTP_STREAM_RINGBUFFER_SIZE, \
-    .multi_out_num = 0, \
+#define HTTP_STREAM_CFG_DEFAULT() {              \
+    .type = AUDIO_STREAM_READER,                 \
+    .out_rb_size = HTTP_STREAM_RINGBUFFER_SIZE,  \
+    .task_stack = HTTP_STREAM_TASK_STACK,        \
+    .task_core = HTTP_STREAM_TASK_CORE,          \
+    .task_prio = HTTP_STREAM_TASK_PRIO,          \
+    .stack_in_ext = true,                        \
+    .event_handle = NULL,                        \
+    .user_data = NULL,                           \
+    .auto_connect_next_track = false,            \
+    .enable_playlist_parser = false,             \
+    .multi_out_num = 0,                          \
 }
 
 /**

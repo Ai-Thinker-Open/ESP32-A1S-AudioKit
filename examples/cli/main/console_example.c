@@ -95,7 +95,7 @@ static esp_err_t cli_play(esp_periph_handle_t periph, int argc, char *argv[])
             sdcard_list_choose(playlist, index, &str);
             ESP_LOGI(TAG, "play index= %d, URI:%s, byte_pos:%d", index, str, byte_pos);
         } else {
-            ESP_LOGI(TAG, "play URI:%s, byte_pos:%d", argv[0], byte_pos);
+            ESP_LOGI(TAG, "play index= %d, URI:%s, byte_pos:%d", -1, argv[0], byte_pos);
             str = argv[0];
         }
     } else {
@@ -198,7 +198,7 @@ static esp_err_t cli_insert_tone(esp_periph_handle_t periph, int argc, char *arg
             sdcard_list_choose(playlist, index, &str);
             ESP_LOGI(TAG, "Tone play index= %d, URI:%s", index, str);
         } else {
-            ESP_LOGI(TAG, "Tone play URI:%s", argv[0]);
+            ESP_LOGI(TAG, "Tone play index= %d, URI:%s", -1, argv[0]);
             str = argv[0];
         }
     } else {
@@ -318,8 +318,9 @@ static esp_err_t playlist_sd_scan(esp_periph_handle_t periph, int argc, char *ar
             ESP_LOGE(TAG, "Invalid scan path parameter");
             return ESP_ERR_INVALID_ARG;
         }
+        sdcard_list_reset(playlist);
         sdcard_scan(sdcard_url_save_cb, argv[0],
-        0, (const char *[]) {"mp3", "m4a", "flac", "ogg", "opus", "amr", "ts"}, 7, playlist);
+        0, (const char *[]) {"mp3", "m4a", "flac", "ogg", "opus", "amr", "ts", "aac", "wav"}, 9, playlist);
         sdcard_list_show(playlist);
     } else {
         ESP_LOGE(TAG, "Please enter the can path");
@@ -470,6 +471,7 @@ static void esp_audio_state_task (void *para)
             if (auto_play_type) {
                 char *url = NULL;
                 if (sdcard_list_next(playlist, 1, &url) == ESP_OK) {
+                    ESP_LOGI(TAG, "play index= %d, URI:%s, byte_pos:%d", sdcard_list_get_url_id(playlist), url, 0);
                     esp_audio_play(player, AUDIO_CODEC_TYPE_DECODER, url, 0);
                 }
             }
@@ -587,6 +589,7 @@ static void cli_setup_player(void)
 
     i2s_stream_cfg_t i2s_writer = I2S_STREAM_CFG_DEFAULT();
     i2s_writer.i2s_config.sample_rate = 48000;
+    i2s_writer.i2s_config.mode = I2S_MODE_MASTER | I2S_MODE_TX;
     i2s_writer.type = AUDIO_STREAM_WRITER;
 
     raw_stream_cfg_t raw_writer = RAW_STREAM_CFG_DEFAULT();

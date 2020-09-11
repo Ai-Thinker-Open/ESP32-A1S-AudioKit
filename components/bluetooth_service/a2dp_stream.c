@@ -22,13 +22,10 @@
  *
  */
 
-#include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
 #include <string.h>
 #include "nvs.h"
 #include "nvs_flash.h"
-#include "esp_system.h"
 #include "esp_log.h"
 #include "esp_peripherals.h"
 #include "audio_common.h"
@@ -110,12 +107,7 @@ static void bt_a2d_sink_cb(esp_a2d_cb_event_t event, esp_a2d_cb_param_t *param)
                 if (a2dp_sink_stream_handle == NULL) {
                     break;
                 }
-                audio_element_info_t bt_info = {0};
-                audio_element_getinfo(a2dp_sink_stream_handle, &bt_info);
-                bt_info.sample_rates = sample_rate;
-                bt_info.channels = 2;
-                bt_info.bits = 16;
-                audio_element_setinfo(a2dp_sink_stream_handle, &bt_info);
+                audio_element_set_music_info(a2dp_sink_stream_handle, sample_rate, 2, 16);
                 audio_element_report_info(a2dp_sink_stream_handle);
             }
             break;

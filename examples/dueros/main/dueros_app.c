@@ -61,12 +61,12 @@
 
 #if __has_include("esp_idf_version.h")
 #include "esp_idf_version.h"
+#else
+#define ESP_IDF_VERSION_VAL(major, minor, patch) 0
 #endif
 
-#ifdef ESP_IDF_VERSION
-#if (ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(4, 0, 0))
+#if (ESP_IDF_VERSION > ESP_IDF_VERSION_VAL(3, 3, 2))
 #include "driver/touch_pad.h"
-#endif
 #endif
 
 static const char *TAG              = "DUEROS";
@@ -145,8 +145,9 @@ static esp_err_t recorder_pipeline_open_for_mini(void **handle)
     audio_pipeline_register(recorder, algo_handle, "algo");
     audio_element_set_read_cb(algo_handle, duer_i2s_read_cb, (void *)i2s_reader);
     audio_pipeline_register(recorder, raw_read, "raw");
-
-    audio_pipeline_link(recorder, (const char *[]) {"algo", "raw"}, 2);
+    
+    const char *link_tag[2] = {"algo", "raw"};
+    audio_pipeline_link(recorder, &link_tag[0], 2);
 
     audio_pipeline_run(recorder);
     ESP_LOGI(TAG, "Recorder has been created");
@@ -187,7 +188,8 @@ static esp_err_t recorder_pipeline_open(void **handle)
     audio_pipeline_register(recorder, i2s_stream_reader, "i2s");
     audio_pipeline_register(recorder, filter, "filter");
     audio_pipeline_register(recorder, raw_read, "raw");
-    audio_pipeline_link(recorder, (const char *[]) {"i2s", "filter", "raw"}, 3);
+    const char *link_tag[3] = {"i2s", "filter", "raw"};
+    audio_pipeline_link(recorder, &link_tag[0], 3);
     audio_pipeline_run(recorder);
     ESP_LOGI(TAG, "Recorder has been created");
     *handle = recorder;

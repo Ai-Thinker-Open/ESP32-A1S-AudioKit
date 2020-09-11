@@ -43,6 +43,8 @@ typedef struct {
     int                     task_stack;     /*!< Task stack size */
     int                     task_core;      /*!< Task running in core (0 or 1) */
     int                     task_prio;      /*!< Task priority (based on freeRTOS priority) */
+    bool                    ext_stack;      /*!< Allocate stack on extern ram */
+    bool                    write_header;   /*!< Choose to write amrnb/amrwb header in fatfs whether or not (true or false, true means choose to write amrnb header) */
 } fatfs_stream_cfg_t;
 
 
@@ -52,12 +54,15 @@ typedef struct {
 #define FATFS_STREAM_TASK_PRIO           (4)
 #define FATFS_STREAM_RINGBUFFER_SIZE     (8 * 1024)
 
-#define FATFS_STREAM_CFG_DEFAULT() {\
-    .task_prio = FATFS_STREAM_TASK_PRIO, \
-    .task_core = FATFS_STREAM_TASK_CORE, \
-    .task_stack = FATFS_STREAM_TASK_STACK, \
+#define FATFS_STREAM_CFG_DEFAULT() {             \
+    .type = AUDIO_STREAM_NONE,                   \
+    .buf_sz = FATFS_STREAM_BUF_SIZE,             \
     .out_rb_size = FATFS_STREAM_RINGBUFFER_SIZE, \
-    .buf_sz = FATFS_STREAM_BUF_SIZE, \
+    .task_stack = FATFS_STREAM_TASK_STACK,       \
+    .task_core = FATFS_STREAM_TASK_CORE,         \
+    .task_prio = FATFS_STREAM_TASK_PRIO,         \
+    .ext_stack = false,                          \
+    .write_header = true,                        \
 }
 
 /**

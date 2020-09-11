@@ -18,6 +18,8 @@
 #include "i2s_stream.h"
 #include "esp_peripherals.h"
 #include "periph_touch.h"
+#include "periph_adc_button.h"
+#include "periph_button.h"
 #include "board.h"
 #include "filter_resample.h"
 #include "audio_mem.h"
@@ -79,9 +81,11 @@ void app_main(void)
     audio_element_handle_t filter = rsp_filter_init(&rsp_cfg);
     audio_pipeline_register(pipeline, filter, "filter");
     i2s_stream_set_clk(i2s_stream_writer, 48000, 16, 2);
-    audio_pipeline_link(pipeline, (const char *[]) {"bt", "filter", "i2s"}, 3);
+    const char *link_tag[3] = {"bt", "filter", "i2s"};
+    audio_pipeline_link(pipeline, &link_tag[0], 3);
 #else
-    audio_pipeline_link(pipeline, (const char *[]) {"bt", "i2s"}, 2);
+    const char *link_tag[2] = {"bt", "i2s"};
+    audio_pipeline_link(pipeline, &link_tag[0], 2);
 #endif
     ESP_LOGI(TAG, "[ 4 ] Initialize peripherals");
     esp_periph_config_t periph_cfg = DEFAULT_ESP_PERIPH_SET_CONFIG();
@@ -139,9 +143,8 @@ void app_main(void)
             continue;
         }
 
-        if (msg.source_type == PERIPH_ID_TOUCH
-            && msg.cmd == PERIPH_TOUCH_TAP
-            && msg.source == (void *)esp_periph_set_get_by_id(set, PERIPH_ID_TOUCH)) {
+        if ((msg.source_type == PERIPH_ID_TOUCH || msg.source_type == PERIPH_ID_BUTTON || msg.source_type == PERIPH_ID_ADC_BTN)
+            && (msg.cmd == PERIPH_TOUCH_TAP || msg.cmd == PERIPH_BUTTON_PRESSED || msg.cmd == PERIPH_ADC_BUTTON_PRESSED)) {
 
             if ((int) msg.data == get_input_play_id()) {
                 ESP_LOGI(TAG, "[ * ] [Play] touch tap event");
@@ -176,6 +179,8 @@ void app_main(void)
     }
 
     ESP_LOGI(TAG, "[ 8 ] Stop audio_pipeline");
+    audio_pipeline_stop(pipeline);
+    audio_pipeline_wait_for_stop(pipeline);
     audio_pipeline_terminate(pipeline);
 
     audio_pipeline_unregister(pipeline, bt_stream_reader);

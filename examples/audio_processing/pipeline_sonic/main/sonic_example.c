@@ -119,7 +119,8 @@ void record_playback_task()
     audio_pipeline_register(pipeline_rec, i2s_reader_el, "i2s_reader");
     audio_pipeline_register(pipeline_rec, wav_encoder_el, "wav_encoder");
     audio_pipeline_register(pipeline_rec, fatfs_writer_el, "file_writer");
-    audio_pipeline_link(pipeline_rec, (const char *[]) {"i2s_reader", "wav_encoder", "file_writer"}, 3);
+    const char *link_rec[3] = {"i2s_reader", "wav_encoder", "file_writer"};
+    audio_pipeline_link(pipeline_rec, &link_rec[0], 3);
 
     /**
      * For the Playback:
@@ -136,7 +137,9 @@ void record_playback_task()
     audio_pipeline_register(pipeline_play, wav_decoder_el, "wav_decoder");
     audio_pipeline_register(pipeline_play, sonic_el, "sonic");
     audio_pipeline_register(pipeline_play, i2s_writer_el, "i2s_writer");
-    audio_pipeline_link(pipeline_play, (const char *[]) {"file_reader", "wav_decoder", "sonic", "i2s_writer"}, 4);
+    
+    const char *link_play[4] = {"file_reader", "wav_decoder", "sonic", "i2s_writer"};
+    audio_pipeline_link(pipeline_play, &link_play[0], 4);
 
     ESP_LOGI(TAG, "[ 3 ] Set up  event listener");
     audio_event_iface_cfg_t evt_cfg = AUDIO_EVENT_IFACE_DEFAULT_CFG();
@@ -167,6 +170,8 @@ void record_playback_task()
             if (msg.cmd == PERIPH_BUTTON_PRESSED) {
                 //using LOGE to make the log color different
                 ESP_LOGE(TAG, "Now recording, release [Rec] to STOP");
+                audio_pipeline_stop(pipeline_play);
+                audio_pipeline_wait_for_stop(pipeline_play);
                 audio_pipeline_terminate(pipeline_play);
                 audio_pipeline_reset_ringbuffer(pipeline_play);
                 audio_pipeline_reset_elements(pipeline_play);
@@ -181,6 +186,8 @@ void record_playback_task()
                 audio_pipeline_run(pipeline_rec);
             } else if (msg.cmd == PERIPH_BUTTON_RELEASE || msg.cmd == PERIPH_BUTTON_LONG_RELEASE) {
                 ESP_LOGI(TAG, "START Playback");
+                audio_pipeline_stop(pipeline_rec);
+                audio_pipeline_wait_for_stop(pipeline_rec);
                 audio_pipeline_terminate(pipeline_rec);
                 audio_pipeline_reset_ringbuffer(pipeline_rec);
                 audio_pipeline_reset_elements(pipeline_rec);
@@ -203,7 +210,11 @@ void record_playback_task()
     }
 
     ESP_LOGI(TAG, "[ 4 ] Stop audio_pipeline");
+    audio_pipeline_stop(pipeline_rec);
+    audio_pipeline_wait_for_stop(pipeline_rec);
     audio_pipeline_terminate(pipeline_rec);
+    audio_pipeline_stop(pipeline_play);
+    audio_pipeline_wait_for_stop(pipeline_play);
     audio_pipeline_terminate(pipeline_play);
 
     audio_pipeline_unregister(pipeline_play, fatfs_reader_el);

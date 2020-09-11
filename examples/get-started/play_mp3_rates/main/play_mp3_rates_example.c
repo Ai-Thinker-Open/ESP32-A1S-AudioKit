@@ -30,16 +30,16 @@ static struct marker {
 } file_marker;
 
 // low rate mp3 audio
-extern const uint8_t lr_mp3_start[] asm("_binary_16b_2c_8000hz_mp3_start");
-extern const uint8_t lr_mp3_end[]   asm("_binary_16b_2c_8000hz_mp3_end");
+extern const uint8_t lr_mp3_start[] asm("_binary_music_16b_2c_8000hz_mp3_start");
+extern const uint8_t lr_mp3_end[]   asm("_binary_music_16b_2c_8000hz_mp3_end");
 
 // medium rate mp3 audio
-extern const uint8_t mr_mp3_start[] asm("_binary_16b_2c_22050hz_mp3_start");
-extern const uint8_t mr_mp3_end[]   asm("_binary_16b_2c_22050hz_mp3_end");
+extern const uint8_t mr_mp3_start[] asm("_binary_music_16b_2c_22050hz_mp3_start");
+extern const uint8_t mr_mp3_end[]   asm("_binary_music_16b_2c_22050hz_mp3_end");
 
 // high rate mp3 audio
-extern const uint8_t hr_mp3_start[] asm("_binary_16b_2c_44100hz_mp3_start");
-extern const uint8_t hr_mp3_end[]   asm("_binary_16b_2c_44100hz_mp3_end");
+extern const uint8_t hr_mp3_start[] asm("_binary_music_16b_2c_44100hz_mp3_start");
+extern const uint8_t hr_mp3_end[]   asm("_binary_music_16b_2c_44100hz_mp3_end");
 
 static void set_next_file_marker()
 {
@@ -112,7 +112,8 @@ void app_main(void)
     audio_pipeline_register(pipeline, i2s_stream_writer, "i2s");
 
     ESP_LOGI(TAG, "[2.4] Link it together [mp3_music_read_cb]-->mp3_decoder-->i2s_stream-->[codec_chip]");
-    audio_pipeline_link(pipeline, (const char *[]) {"mp3", "i2s"}, 2);
+    const char *link_tag[2] = {"mp3", "i2s"};
+    audio_pipeline_link(pipeline, &link_tag[0], 2);
 
     ESP_LOGI(TAG, "[ 3 ] Set up  event listener");
     audio_event_iface_cfg_t evt_cfg = AUDIO_EVENT_IFACE_DEFAULT_CFG();
@@ -149,6 +150,8 @@ void app_main(void)
         if (msg.source_type == AUDIO_ELEMENT_TYPE_ELEMENT && msg.source == (void *) i2s_stream_writer
             && msg.cmd == AEL_MSG_CMD_REPORT_STATUS
             && (((int)msg.data == AEL_STATUS_STATE_STOPPED) || ((int)msg.data == AEL_STATUS_STATE_FINISHED))) {
+            audio_pipeline_stop(pipeline);
+            audio_pipeline_wait_for_stop(pipeline);
             audio_pipeline_terminate(pipeline);
             audio_pipeline_reset_ringbuffer(pipeline);
             audio_pipeline_reset_elements(pipeline);
@@ -159,6 +162,8 @@ void app_main(void)
     }
 
     ESP_LOGI(TAG, "[ 5 ] Stop audio_pipeline");
+    audio_pipeline_stop(pipeline);
+    audio_pipeline_wait_for_stop(pipeline);
     audio_pipeline_terminate(pipeline);
 
     audio_pipeline_unregister(pipeline, mp3_decoder);

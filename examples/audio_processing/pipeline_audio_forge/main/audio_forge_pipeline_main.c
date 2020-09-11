@@ -36,7 +36,7 @@ static const char *TAG = "AUDIO_FORGE_PIPELINE";
 int audio_forge_wr_cb(audio_element_handle_t el, char *buf, int len, TickType_t wait_time, void *ctx)
 {
     audio_element_handle_t i2s_wr = (audio_element_handle_t)ctx;
-    int ret = audio_element_output(i2s_wr,buf, len);
+    int ret = audio_element_output(i2s_wr, buf, len);
     return ret;
 }
 
@@ -72,13 +72,13 @@ void app_main(void)
     audio_forge_cfg.audio_forge.source_num = NUMBER_SOURCE_FILE;
     audio_element_handle_t audio_forge = audio_forge_init(&audio_forge_cfg);
     audio_forge_src_info_t source_information = {
-            .samplerate = DEFAULT_SAMPLERATE,
-            .channel = DEFAULT_CHANNEL,
+        .samplerate = DEFAULT_SAMPLERATE,
+        .channel = DEFAULT_CHANNEL,
     };
 
     audio_forge_downmix_t downmix_information = {
-            .gain = {0, MUSIC_GAIN_DB},
-            .transit_time = TRANSMITTIME,
+        .gain = {0, MUSIC_GAIN_DB},
+        .transit_time = TRANSMITTIME,
     };
     audio_forge_src_info_t source_info[NUMBER_SOURCE_FILE] = {0};
     audio_forge_downmix_t downmix_info[NUMBER_SOURCE_FILE];
@@ -139,8 +139,9 @@ void app_main(void)
         audio_pipeline_register(pipeline[i], fats_rd_el[i], "file");
         audio_pipeline_register(pipeline[i], wav_decoder[i], "wav");
         audio_pipeline_register(pipeline[i], el_raw_write[i], "raw");
-
-        audio_pipeline_link(pipeline[i], (const char *[]) {"file", "wav", "raw"}, 3);
+          
+        const char *link_tag[3] = {"file", "wav", "raw"};
+        audio_pipeline_link(pipeline[i], &link_tag[0], 3);
         ringbuf_handle_t rb = audio_element_get_input_ringbuf(el_raw_write[i]);
         audio_element_set_multi_input_ringbuf(audio_forge, rb, i);
         audio_pipeline_set_listener(pipeline[i], evt);
@@ -187,6 +188,8 @@ void app_main(void)
 
     ESP_LOGI(TAG, "[6.0] Stop pipelines");
     for (int i = 0; i < NUMBER_SOURCE_FILE; i++) {
+        audio_pipeline_stop(pipeline[i]);
+        audio_pipeline_wait_for_stop(pipeline[i]);
         audio_pipeline_terminate(pipeline[i]);
         audio_pipeline_unregister_more(pipeline[i], fats_rd_el[i], wav_decoder[i], el_raw_write[i], NULL);
         audio_pipeline_remove_listener(pipeline[i]);
@@ -196,6 +199,8 @@ void app_main(void)
         audio_element_deinit(wav_decoder[i]);
         audio_element_deinit(el_raw_write[i]);
     }
+    audio_pipeline_stop(pipeline_mix);
+    audio_pipeline_wait_for_stop(pipeline_mix);
     audio_pipeline_terminate(pipeline_mix);
     audio_pipeline_unregister_more(pipeline_mix, audio_forge, NULL);
     audio_pipeline_remove_listener(pipeline_mix);

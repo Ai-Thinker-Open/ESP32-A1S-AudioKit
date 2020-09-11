@@ -136,7 +136,8 @@ void flexible_pipeline_playback()
 
     ESP_LOGI(TAG, "[ 4 ] Start playback pipeline");
     bool source_is_mp3_format = false;
-    audio_pipeline_link(pipeline_play, (const char *[]) {p0_reader_tag, "aac_decoder", "filter_upsample", "i2s_writer"}, 4);
+    const char *link_tag[4] = {p0_reader_tag, "aac_decoder", "filter_upsample", "i2s_writer"};
+    audio_pipeline_link(pipeline_play, &link_tag[0], 4);
     audio_pipeline_run(pipeline_play);
     while (1) {
         audio_event_iface_msg_t msg;
@@ -167,6 +168,8 @@ void flexible_pipeline_playback()
     }
 
     ESP_LOGI(TAG, "[ 5 ] Stop playback pipeline");
+    audio_pipeline_stop(pipeline_play);
+    audio_pipeline_wait_for_stop(pipeline_play);
     audio_pipeline_terminate(pipeline_play);
     audio_pipeline_unregister_more(pipeline_play, fatfs_aac_reader_el,
                                    fatfs_mp3_reader_el, mp3_decoder_el,

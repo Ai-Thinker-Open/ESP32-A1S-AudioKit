@@ -72,7 +72,8 @@ void app_main(void)
     audio_pipeline_register(pipeline, bt_stream_writer,   "bt");
 
     ESP_LOGI(TAG, "[4.2] Link it together http_stream-->mp3_decoder-->bt_stream_writer");
-    audio_pipeline_link(pipeline, (const char *[]) {"http", "mp3", "bt"}, 3);
+    const char *link_tag[3] = {"http", "mp3", "bt"};
+    audio_pipeline_link(pipeline, &link_tag[0], 3);
 
     ESP_LOGI(TAG, "[4.3] Set up  uri (http as http_stream, mp3 as mp3 decoder, and default output is i2s)");
     audio_element_set_uri(http_stream_reader, "https://dl.espressif.com/dl/audio/ff-16b-2c-44100hz.mp3");
@@ -139,6 +140,8 @@ void app_main(void)
     }
 
     ESP_LOGI(TAG, "[ 9 ] Stop audio_pipeline");
+    audio_pipeline_stop(pipeline);
+    audio_pipeline_wait_for_stop(pipeline);
     audio_pipeline_terminate(pipeline);
 
     /* Terminate the pipeline before removing the listener */

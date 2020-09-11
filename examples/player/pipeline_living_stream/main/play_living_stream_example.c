@@ -91,7 +91,8 @@ void app_main(void)
     audio_pipeline_register(pipeline, i2s_stream_writer,  "i2s");
 
     ESP_LOGI(TAG, "[2.5] Link it together http_stream-->aac_decoder-->i2s_stream-->[codec_chip]");
-    audio_pipeline_link(pipeline, (const char *[]) {"http",  "aac", "i2s"}, 3);
+    const char *link_tag[3] = {"http", "aac", "i2s"};
+    audio_pipeline_link(pipeline, &link_tag[0], 3);
 
     ESP_LOGI(TAG, "[2.6] Set up  uri (http as http_stream, aac as aac decoder, and default output is i2s)");
     audio_element_set_uri(http_stream_reader, AAC_STREAM_URI);
@@ -158,6 +159,8 @@ void app_main(void)
     }
 
     ESP_LOGI(TAG, "[ 6 ] Stop audio_pipeline");
+    audio_pipeline_stop(pipeline);
+    audio_pipeline_wait_for_stop(pipeline);
     audio_pipeline_terminate(pipeline);
 
     audio_pipeline_unregister(pipeline, http_stream_reader);

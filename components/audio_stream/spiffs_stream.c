@@ -60,6 +60,7 @@ typedef struct spiffs_stream {
     bool is_open;
     FILE *file;
     wr_stream_type_t w_type;
+    bool write_header;
 } spiffs_stream_t;
 
 static wr_stream_type_t get_type(const char *str)
@@ -120,10 +121,10 @@ static esp_err_t _spiffs_open(audio_element_handle_t self)
             wav_header_t info = {0};
             fwrite(&info, 1, sizeof(wav_header_t), spiffs->file);
             fsync(fileno(spiffs->file));
-        } else if (spiffs->file && (STREAM_TYPE_AMR == spiffs->w_type)) {
+        } else if (spiffs->file && (STREAM_TYPE_AMR == spiffs->w_type) && (spiffs->write_header == true)) {
             fwrite("#!AMR\n", 1, 6, spiffs->file);
             fsync(fileno(spiffs->file));
-        } else if (spiffs->file && (STREAM_TYPE_AMRWB == spiffs->w_type)) {
+        } else if (spiffs->file && (STREAM_TYPE_AMRWB == spiffs->w_type) && (spiffs->write_header == true)) {
             fwrite("#!AMR-WB\n", 1, 9, spiffs->file);
             fsync(fileno(spiffs->file));
         }
@@ -140,8 +141,8 @@ static esp_err_t _spiffs_open(audio_element_handle_t self)
         ESP_LOGE(TAG, "Failed to seek to %d/%d", (int)info.byte_pos, (int)info.total_bytes);
         return ESP_FAIL;
     }
-
-    return audio_element_setinfo(self, &info);
+    int ret = audio_element_set_total_bytes(self, info.total_bytes);
+    return ret;
 }
 
 static int _spiffs_read(audio_element_handle_t self, char *buffer, int len, TickType_t ticks_to_wait, void *context)
@@ -155,8 +156,7 @@ static int _spiffs_read(audio_element_handle_t self, char *buffer, int len, Tick
     if (rlen <= 0) {
         ESP_LOGW(TAG, "No more data, ret:%d", rlen);
     } else {
-        info.byte_pos += rlen;
-        audio_element_setinfo(self, &info);
+        audio_element_update_byte_pos(self, rlen);
     }
     return rlen;
 }
@@ -170,8 +170,7 @@ static int _spiffs_write(audio_element_handle_t self, char *buffer, int len, Tic
     fsync(fileno(spiffs->file));
     ESP_LOGD(TAG, "write:%d, errno:%d, pos:%d", wlen, errno, (int)info.byte_pos);
     if (wlen > 0) {
-        info.byte_pos += wlen;
-        audio_element_setinfo(self, &info);
+        audio_element_update_byte_pos(self, wlen);
     }
     return wlen;
 }
@@ -217,10 +216,7 @@ static esp_err_t _spiffs_close(audio_element_handle_t self)
     }
     if (AEL_STATE_PAUSED != audio_element_get_state(self)) {
         audio_element_report_pos(self);
-        audio_element_info_t info = {0};
-        audio_element_getinfo(self, &info);
-        info.byte_pos = 0;
-        audio_element_setinfo(self, &info);
+        audio_element_set_byte_pos(self, 0);
     }
     return ESP_OK;
 }
@@ -256,6 +252,7 @@ audio_element_handle_t spiffs_stream_init(spiffs_stream_cfg_t *config)
 
     cfg.tag = "spiffs";
     spiffs->type = config->type;
+    spiffs->write_header = config->write_header;
 
     if (config->type == AUDIO_STREAM_WRITER) {
         cfg.write = _spiffs_write;

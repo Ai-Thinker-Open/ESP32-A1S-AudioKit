@@ -33,6 +33,7 @@ INPUT = \
     ../../components/audio_stream/include/i2s_stream.h \
     ../../components/audio_stream/include/raw_stream.h \
     ../../components/audio_stream/include/spiffs_stream.h \
+    ../../components/audio_stream/include/tcp_client_stream.h \
     ../../components/audio_stream/include/algorithm_stream.h \
     ## ESP Codec
     ../../components/esp-adf-libs/esp_codec/include/codec/esp_decoder.h \
@@ -101,6 +102,7 @@ INPUT = \
     ../../components/input_key_service/include/input_key_service.h \
     ../../components/dueros_service/include/dueros_service.h \
     ../../components/display_service/include/display_service.h \
+    ../../components/coredump_upload_service/include/coredump_upload_service.h \
     ## Dispatcher framwork
     ../../components/esp_dispatcher/include/periph_service.h \
     ../../components/esp_dispatcher/include/audio_service.h \

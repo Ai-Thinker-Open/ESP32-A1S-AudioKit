@@ -26,6 +26,7 @@
 #define _TONE_STREAM_H_
 
 #include "audio_element.h"
+#include "esp_image_format.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -42,6 +43,8 @@ typedef struct
     int task_stack;           /*!< Task stack size */
     int task_core;            /*!< Task running in core (0 or 1) */
     int task_prio;            /*!< Task priority (based on freeRTOS priority) */
+    bool extern_stack;        /*!< Task stack allocate on the extern ram */
+    bool use_delegate;        /*!< Read tone partition with esp_delegate. If task stack is on extern ram, this MUST be TRUE */
 } tone_stream_cfg_t;
 
 #define TONE_STREAM_BUF_SIZE        (2048)
@@ -49,15 +52,20 @@ typedef struct
 #define TONE_STREAM_TASK_CORE       (0)
 #define TONE_STREAM_TASK_PRIO       (4)
 #define TONE_STREAM_RINGBUFFER_SIZE (2 * 1024)
+#define TONE_STREAM_EXT_STACK       (false)
+#define TONE_STREAM_USE_DELEGATE    (false)
 
-#define TONE_STREAM_CFG_DEFAULT()                   \
-    {                                                 \
-        .task_prio = TONE_STREAM_TASK_PRIO,         \
-        .task_core = TONE_STREAM_TASK_CORE,         \
-        .task_stack = TONE_STREAM_TASK_STACK,       \
-        .out_rb_size = TONE_STREAM_RINGBUFFER_SIZE, \
-        .buf_sz = TONE_STREAM_BUF_SIZE,             \
-    }
+#define TONE_STREAM_CFG_DEFAULT()               \
+{                                               \
+    .type = AUDIO_STREAM_NONE,                  \
+    .buf_sz = TONE_STREAM_BUF_SIZE,             \
+    .out_rb_size = TONE_STREAM_RINGBUFFER_SIZE, \
+    .task_stack = TONE_STREAM_TASK_STACK,       \
+    .task_core = TONE_STREAM_TASK_CORE,         \
+    .task_prio = TONE_STREAM_TASK_PRIO,         \
+    .extern_stack = TONE_STREAM_EXT_STACK,      \
+    .use_delegate = TONE_STREAM_USE_DELEGATE,   \
+}
 
 /**
  * @brief      Create a handle to an Audio Element to stream data from flash to another Element

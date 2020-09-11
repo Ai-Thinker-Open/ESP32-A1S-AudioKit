@@ -53,6 +53,7 @@ typedef enum {
     PERIPH_ID_IS31FL3216 = AUDIO_ELEMENT_TYPE_PERIPH + 13,
     PERIPH_ID_GPIO_ISR   = AUDIO_ELEMENT_TYPE_PERIPH + 14,
     PERIPH_ID_WS2812     = AUDIO_ELEMENT_TYPE_PERIPH + 15,
+    PERIPH_ID_AW2013     = AUDIO_ELEMENT_TYPE_PERIPH + 16
 } esp_periph_id_t;
 
 /**
@@ -82,6 +83,7 @@ typedef struct {
     int                         task_stack;             /*!< >0 Service task stack size; =0 without task created */
     int                         task_prio;              /*!< Service task priority (based on freeRTOS priority) */
     int                         task_core;              /*!< Service task running in core (0 or 1) */
+    bool                        extern_stack;           /*!< Service task stack allocate on extern ram */
 } esp_periph_config_t;
 
 /**
@@ -101,6 +103,7 @@ typedef struct esp_periph_event {
     .task_stack         = DEFAULT_ESP_PERIPH_STACK_SIZE,   \
     .task_prio          = DEFAULT_ESP_PERIPH_TASK_PRIO,    \
     .task_core          = DEFAULT_ESP_PERIPH_TASK_CORE,    \
+    .extern_stack       = false,                           \
 }
 
 /**
