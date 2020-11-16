@@ -19,6 +19,7 @@
 #include "audio_hal.h"
 #include "fatfs_stream.h"
 #include "i2s_stream.h"
+#include "opus_decoder.h"
 
 #if defined CONFIG_ESP_LYRAT_MINI_V1_1_BOARD
 #include "filter_resample.h"
@@ -33,10 +34,10 @@ static const char *TAG = "REC_OPUS_SDCARD";
 
 #define RECORD_TIME_SECONDS (10)
 
-#define SAMPLE_RATE         16000
+#define SAMPLE_RATE         48000
 #define CHANNEL             1
 #define BIT_RATE            64000
-#define COMPLEXITY          10
+#define COMPLEXITY          0
 
 void app_main(void)
 {
@@ -60,7 +61,7 @@ void app_main(void)
 
     ESP_LOGI(TAG, "[ 2 ] Start codec chip");
     audio_board_handle_t board_handle = audio_board_init();
-    audio_hal_ctrl_codec(board_handle->audio_hal, AUDIO_HAL_CODEC_MODE_ENCODE, AUDIO_HAL_CTRL_START);
+    audio_hal_ctrl_codec(board_handle->audio_hal, AUDIO_HAL_CODEC_MODE_LINE_IN, AUDIO_HAL_CTRL_START);
 
     ESP_LOGI(TAG, "[3.0] Create audio pipeline for recording");
     audio_pipeline_cfg_t pipeline_cfg = DEFAULT_AUDIO_PIPELINE_CONFIG();
@@ -82,10 +83,10 @@ void app_main(void)
         i2s_cfg.i2s_config.channel_format = I2S_CHANNEL_FMT_RIGHT_LEFT;
     }
 
-#if defined CONFIG_ESP_LYRAT_MINI_V1_1_BOARD
-    i2s_cfg.i2s_config.channel_format = I2S_CHANNEL_FMT_RIGHT_LEFT;
-    i2s_cfg.i2s_port = 1;
-#endif
+// #if defined CONFIG_ESP_LYRAT_MINI_V1_1_BOARD
+//     i2s_cfg.i2s_config.channel_format = I2S_CHANNEL_FMT_RIGHT_LEFT;
+//     i2s_cfg.i2s_port = 1;
+// #endif
 
     i2s_stream_reader = i2s_stream_init(&i2s_cfg);
 
@@ -137,7 +138,8 @@ void app_main(void)
 #endif
 
     ESP_LOGI(TAG, "[3.6] Setup uri (file as fatfs_stream, opus as opus encoder)");
-    audio_element_set_uri(fatfs_stream_writer, "/sdcard/rec.opus");
+    // audio_element_set_uri(fatfs_stream_writer, "/sdcard/rec.opus");
+    audio_element_set_uri(fatfs_stream_writer, "/sdcard/01.opu");
 
     ESP_LOGI(TAG, "[ 4 ] Setup event listener");
     audio_event_iface_cfg_t evt_cfg = AUDIO_EVENT_IFACE_DEFAULT_CFG();
@@ -178,14 +180,15 @@ void app_main(void)
     audio_pipeline_stop(pipeline);
     audio_pipeline_wait_for_stop(pipeline);
     audio_pipeline_terminate(pipeline);
-    audio_pipeline_unregister(pipeline, fatfs_stream_writer);
+
     audio_pipeline_unregister(pipeline, opus_encoder);
+    audio_pipeline_unregister(pipeline, i2s_stream_reader);
+    audio_pipeline_unregister(pipeline, fatfs_stream_writer);
+    
 
 #if defined CONFIG_ESP_LYRAT_MINI_V1_1_BOARD
     audio_pipeline_unregister(pipeline, resample);
 #endif
-
-    audio_pipeline_unregister(pipeline, i2s_stream_reader);
 
     /* Terminate the pipeline before removing the listener */
     audio_pipeline_remove_listener(pipeline);
