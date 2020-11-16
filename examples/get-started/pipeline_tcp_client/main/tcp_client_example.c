@@ -62,6 +62,7 @@ void app_main(void)
     ESP_LOGI(TAG, "[2.2] Create mp3 decoder to decode mp3 file");
     mp3_decoder_cfg_t mp3_cfg = DEFAULT_MP3_DECODER_CONFIG();
     mp3_cfg.task_core = 1; // if use core 0 music will be disfluency
+    mp3_cfg.task_prio = 30;
     mp3_decoder = mp3_decoder_init(&mp3_cfg);
     AUDIO_NULL_CHECK(TAG, mp3_decoder, return);
 

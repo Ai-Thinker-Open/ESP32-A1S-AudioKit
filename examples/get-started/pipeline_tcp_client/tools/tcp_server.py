@@ -67,8 +67,10 @@ def start_tcp_server(ip, port):
         print('total size \033[1;35m [%d/%d] \033[0m' % (read_size, fsize))
         if (len(file_msg) <= 0):
             print("get all data for %s" % FILE_NAME)
-            break
-        client.send(file_msg)
+            fo.seek(0,0)
+            read_size = 0
+        else:
+            client.send(file_msg)
  
     fo.close()
     client.close()
