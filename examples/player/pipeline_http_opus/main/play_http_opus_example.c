@@ -21,7 +21,7 @@
 #include "audio_common.h"
 #include "http_stream.h"
 #include "i2s_stream.h"
-#include "mp3_decoder.h"
+#include "opus_decoder.h"
 
 #include "esp_peripherals.h"
 #include "periph_wifi.h"
@@ -41,7 +41,7 @@ void app_main(void)
     tcpip_adapter_init();
 
     audio_pipeline_handle_t pipeline;
-    audio_element_handle_t http_stream_reader, i2s_stream_writer, mp3_decoder;
+    audio_element_handle_t http_stream_reader, i2s_stream_writer,opus_decoder;
 
     esp_log_level_set("*", ESP_LOG_WARN);
     esp_log_level_set(TAG, ESP_LOG_DEBUG);
@@ -57,30 +57,36 @@ void app_main(void)
 
     ESP_LOGI(TAG, "[2.1] Create http stream to read data");
     http_stream_cfg_t http_cfg = HTTP_STREAM_CFG_DEFAULT();
+    // http_cfg.task_core = 1;
+    // http_cfg.task_prio = 1;
     http_stream_reader = http_stream_init(&http_cfg);
 
     ESP_LOGI(TAG, "[2.2] Create i2s stream to write data to codec chip");
     i2s_stream_cfg_t i2s_cfg = I2S_STREAM_CFG_DEFAULT();
     i2s_cfg.type = AUDIO_STREAM_WRITER;
+    // i2s_cfg.task_core = 0;
+    // i2s_cfg.task_prio = 50;
     i2s_stream_writer = i2s_stream_init(&i2s_cfg);
 
-    ESP_LOGI(TAG, "[2.3] Create mp3 decoder to decode mp3 file");
-    mp3_decoder_cfg_t mp3_cfg = DEFAULT_MP3_DECODER_CONFIG();
-    mp3_cfg.task_core = 1;
-    mp3_cfg.task_prio = 10;
-    mp3_decoder = mp3_decoder_init(&mp3_cfg);
+    ESP_LOGI(TAG, "[2.3] Create opus decoder to decode opus file");
+    opus_decoder_cfg_t opus_cfg = DEFAULT_OPUS_DECODER_CONFIG();
+    opus_cfg.task_core = 1;
+    opus_cfg.task_prio = 10;
+    opus_decoder = decoder_opus_init(&opus_cfg);
 
     ESP_LOGI(TAG, "[2.4] Register all elements to audio pipeline");
     audio_pipeline_register(pipeline, http_stream_reader, "http");
-    audio_pipeline_register(pipeline, mp3_decoder,        "mp3");
+    audio_pipeline_register(pipeline, opus_decoder,        "opus");
     audio_pipeline_register(pipeline, i2s_stream_writer,  "i2s");
 
-    ESP_LOGI(TAG, "[2.5] Link it together http_stream-->mp3_decoder-->i2s_stream-->[codec_chip]");
-    const char *link_tag[3] = {"http", "mp3", "i2s"};
+    ESP_LOGI(TAG, "[2.5] Link it together http_stream-->opus_decoder-->i2s_stream-->[codec_chip]");
+    const char *link_tag[3] = {"http", "opus", "i2s"};
     audio_pipeline_link(pipeline, &link_tag[0], 3);
 
-    ESP_LOGI(TAG, "[2.6] Set up  uri (http as http_stream, mp3 as mp3 decoder, and default output is i2s)");
-    audio_element_set_uri(http_stream_reader, "https://dl.espressif.com/dl/audio/ff-16b-2c-44100hz.mp3");
+    // important !! esp32 can only decode single side opus with 44100hz.
+    // two side opus will be disfluency 
+    ESP_LOGI(TAG, "[2.6] Set up  uri (http as http_stream, opus as opus decoder, and default output is i2s)");
+    audio_element_set_uri(http_stream_reader, "https://dl.espressif.com/dl/audio/ff-16b-1c-44100hz.opus");
 
     ESP_LOGI(TAG, "[ 3 ] Start and wait for Wi-Fi network");
     esp_periph_config_t periph_cfg = DEFAULT_ESP_PERIPH_SET_CONFIG();
@@ -115,12 +121,12 @@ void app_main(void)
         }
 
         if (msg.source_type == AUDIO_ELEMENT_TYPE_ELEMENT
-            && msg.source == (void *) mp3_decoder
+            && msg.source == (void *) opus_decoder
             && msg.cmd == AEL_MSG_CMD_REPORT_MUSIC_INFO) {
             audio_element_info_t music_info = {0};
-            audio_element_getinfo(mp3_decoder, &music_info);
+            audio_element_getinfo(opus_decoder, &music_info);
 
-            ESP_LOGI(TAG, "[ * ] Receive music info from mp3 decoder, sample_rates=%d, bits=%d, ch=%d",
+            ESP_LOGI(TAG, "[ * ] Receive music info from opus decoder, sample_rates=%d, bits=%d, ch=%d",
                      music_info.sample_rates, music_info.bits, music_info.channels);
 
             audio_element_setinfo(i2s_stream_writer, &music_info);
@@ -145,7 +151,7 @@ void app_main(void)
     /* Terminate the pipeline before removing the listener */
     audio_pipeline_unregister(pipeline, http_stream_reader);
     audio_pipeline_unregister(pipeline, i2s_stream_writer);
-    audio_pipeline_unregister(pipeline, mp3_decoder);
+    audio_pipeline_unregister(pipeline, opus_decoder);
 
     audio_pipeline_remove_listener(pipeline);
 
@@ -160,6 +166,6 @@ void app_main(void)
     audio_pipeline_deinit(pipeline);
     audio_element_deinit(http_stream_reader);
     audio_element_deinit(i2s_stream_writer);
-    audio_element_deinit(mp3_decoder);
+    audio_element_deinit(opus_decoder);
     esp_periph_set_destroy(set);
 }
