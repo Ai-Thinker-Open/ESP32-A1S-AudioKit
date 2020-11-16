@@ -51,6 +51,7 @@
 #include "i2s_stream.h"
 #include "raw_stream.h"
 #include "filter_resample.h"
+#include "audio_sys.h"
 
 #include "display_service.h"
 #include "wifi_service.h"
@@ -62,10 +63,10 @@
 #if __has_include("esp_idf_version.h")
 #include "esp_idf_version.h"
 #else
-#define ESP_IDF_VERSION_VAL(major, minor, patch) 0
+#define ESP_IDF_VERSION_VAL(major, minor, patch) 1
 #endif
 
-#if (ESP_IDF_VERSION > ESP_IDF_VERSION_VAL(3, 3, 2))
+#if (ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(4, 0, 0))
 #include "driver/touch_pad.h"
 #endif
 
@@ -145,7 +146,7 @@ static esp_err_t recorder_pipeline_open_for_mini(void **handle)
     audio_pipeline_register(recorder, algo_handle, "algo");
     audio_element_set_read_cb(algo_handle, duer_i2s_read_cb, (void *)i2s_reader);
     audio_pipeline_register(recorder, raw_read, "raw");
-    
+
     const char *link_tag[2] = {"algo", "raw"};
     audio_pipeline_link(recorder, &link_tag[0], 2);
 
@@ -371,6 +372,23 @@ esp_err_t periph_callback(audio_event_iface_msg_t *event, void *context)
     return ESP_OK;
 }
 
+void sys_monitor_task(void *para)
+{
+    while (1) {
+        vTaskDelay(5000 / portTICK_PERIOD_MS);
+        AUDIO_MEM_SHOW(TAG);
+#ifdef CONFIG_FREERTOS_USE_TRACE_FACILITY
+        audio_sys_get_real_time_stats();
+#endif
+    }
+    vTaskDelete(NULL);
+}
+
+void start_sys_monitor(void)
+{
+    xTaskCreatePinnedToCore(sys_monitor_task, "sys_monitor_task", (2 * 1024), NULL, 1, NULL, 1);
+}
+
 void duer_app_init(void)
 {
     esp_log_level_set("*", ESP_LOG_INFO);
@@ -384,10 +402,25 @@ void duer_app_init(void)
     }
 
     audio_board_key_init(set);
-    audio_board_sdcard_init(set);
+    audio_board_sdcard_init(set, SD_MODE_1_LINE);
     disp_serv = audio_board_led_init();
 
-    duer_audio_wrapper_init();
+    rec_config_t eng = DEFAULT_REC_ENGINE_CONFIG();
+    eng.vad_off_delay_ms = 800;
+    eng.wakeup_time_ms = 10 * 1000;
+    eng.evt_cb = rec_engine_cb;
+#ifdef CONFIG_ESP_LYRAT_MINI_V1_1_BOARD
+    eng.open = recorder_pipeline_open_for_mini;
+#else
+    eng.open = recorder_pipeline_open;
+#endif
+    eng.close = recorder_pipeline_close;
+    eng.fetch = recorder_pipeline_read;
+    eng.extension = NULL;
+    eng.support_encoding = false;
+    eng.user_data = NULL;
+    rec_engine_create(&eng);
+
     xTimerHandle retry_login_timer = xTimerCreate("tm_duer_login", 1000 / portTICK_PERIOD_MS,
                                      pdFALSE, NULL, retry_login_timer_cb);
     duer_serv_handle = dueros_service_create();
@@ -419,19 +452,6 @@ void duer_app_init(void)
     wifi_service_set_sta_info(wifi_serv, &sta_cfg);
     wifi_service_connect(wifi_serv);
 
-    rec_config_t eng = DEFAULT_REC_ENGINE_CONFIG();
-    eng.vad_off_delay_ms = 800;
-    eng.wakeup_time_ms = 10 * 1000;
-    eng.evt_cb = rec_engine_cb;
-#ifdef CONFIG_ESP_LYRAT_MINI_V1_1_BOARD
-    eng.open = recorder_pipeline_open_for_mini;
-#else
-    eng.open = recorder_pipeline_open;
-#endif
-    eng.close = recorder_pipeline_close;
-    eng.fetch = recorder_pipeline_read;
-    eng.extension = NULL;
-    eng.support_encoding = false;
-    eng.user_data = NULL;
-    rec_engine_create(&eng);
+    duer_audio_wrapper_init();
+    start_sys_monitor();
 }

@@ -43,6 +43,7 @@
 
 #include "sdcard_list.h"
 #include "sdcard_scan.h"
+#include "audio_sys.h"
 
 // #define  ESP_AUDIO_AUTO_PLAY
 
@@ -409,6 +410,12 @@ static esp_err_t task_list(esp_periph_handle_t periph, int argc, char *argv[])
 }
 #endif
 
+static esp_err_t task_real_time_states(esp_periph_handle_t periph, int argc, char *argv[])
+{
+    audio_sys_get_real_time_stats();
+    return ESP_OK;
+}
+
 const periph_console_cmd_t cli_cmd[] = {
     /* ======================== Esp_audio ======================== */
     {
@@ -451,6 +458,7 @@ const periph_console_cmd_t cli_cmd[] = {
 #ifdef CONFIG_FREERTOS_USE_TRACE_FACILITY
     { .cmd = "tasks",       .id = 33, .help = "Get information about running tasks",            .func = task_list },
 #endif
+    { .cmd = "system",      .id = 34, .help = "Get freertos all task states information",       .func = task_real_time_states },
 };
 
 static void esp_audio_state_task (void *para)
@@ -615,7 +623,7 @@ void app_main(void)
     esp_periph_config_t periph_cfg = DEFAULT_ESP_PERIPH_SET_CONFIG();
     set = esp_periph_set_init(&periph_cfg);
 
-    audio_board_sdcard_init(set);
+    audio_board_sdcard_init(set, SD_MODE_1_LINE);
     cli_setup_wifi();
     cli_setup_player();
 

@@ -46,8 +46,11 @@
 #include "audio_player_type.h"
 #include "audio_player.h"
 #include "app_player_init.h"
+#include "audio_player_pipeline_int_tone.h"
 
 static const char *TAG = "APP_PLAYER_INIT";
+
+static audio_element_handle_t g_player_i2s_write_handle;
 
 static int _http_stream_event_handle(http_stream_event_msg_t *msg)
 {
@@ -112,19 +115,15 @@ static esp_audio_handle_t setup_app_esp_audio_instance(esp_audio_cfg_t *cfg, voi
     http_cfg.stack_in_ext = true;
     audio_element_handle_t http_stream_reader = http_stream_init(&http_cfg);
     esp_audio_input_stream_add(handle, http_stream_reader);
+    ESP_LOGI(TAG, "http_stream_reader0:%p", http_stream_reader);
+    http_stream_reader = http_stream_init(&http_cfg);
+    esp_audio_input_stream_add(handle, http_stream_reader);
+    ESP_LOGI(TAG, "http_stream_reader1:%p", http_stream_reader);
+    http_stream_reader = http_stream_init(&http_cfg);
+    esp_audio_input_stream_add(handle, http_stream_reader);
+    ESP_LOGI(TAG, "http_stream_reader2:%p", http_stream_reader);
 
-    // Add decoders and encoders to esp_audio
-    mp3_decoder_cfg_t mp3_dec_cfg = DEFAULT_MP3_DECODER_CONFIG();
-    mp3_dec_cfg.task_core = 1;
-    mp3_dec_cfg.task_prio = 12;
-    aac_decoder_cfg_t aac_cfg = DEFAULT_AAC_DECODER_CONFIG();
-    aac_cfg.task_core = 1;
-    aac_cfg.task_prio = 12;
-    esp_audio_codec_lib_add(handle, AUDIO_CODEC_TYPE_DECODER, aac_decoder_init(&aac_cfg));
-    esp_audio_codec_lib_add(handle, AUDIO_CODEC_TYPE_DECODER, mp3_decoder_init(&mp3_dec_cfg));
-    pcm_decoder_cfg_t pcm_dec_cfg = DEFAULT_PCM_DECODER_CONFIG();
-    esp_audio_codec_lib_add(handle, AUDIO_CODEC_TYPE_DECODER, pcm_decoder_init(&pcm_dec_cfg));
-
+    // Add esp_decoder
     audio_decoder_t auto_decode[] = {
         DEFAULT_ESP_AMRNB_DECODER_CONFIG(),
         DEFAULT_ESP_AMRWB_DECODER_CONFIG(),
@@ -138,14 +137,6 @@ static esp_audio_handle_t setup_app_esp_audio_instance(esp_audio_cfg_t *cfg, voi
     esp_decoder_cfg_t auto_dec_cfg = DEFAULT_ESP_DECODER_CONFIG();
     auto_dec_cfg.task_prio = 12;
     esp_audio_codec_lib_add(handle, AUDIO_CODEC_TYPE_DECODER, esp_decoder_init(&auto_dec_cfg, auto_decode, sizeof(auto_decode) / sizeof(audio_decoder_t)));
-
-    audio_element_handle_t m4a_dec_cfg = aac_decoder_init(&aac_cfg);
-    audio_element_set_tag(m4a_dec_cfg, "m4a");
-    esp_audio_codec_lib_add(handle, AUDIO_CODEC_TYPE_DECODER, m4a_dec_cfg);
-
-    audio_element_handle_t ts_dec_cfg = aac_decoder_init(&aac_cfg);
-    audio_element_set_tag(ts_dec_cfg, "ts");
-    esp_audio_codec_lib_add(handle, AUDIO_CODEC_TYPE_DECODER, ts_dec_cfg);
 
     // Set default volume
     esp_audio_vol_set(handle, 60);
@@ -178,17 +169,19 @@ esp_err_t app_player_init(QueueHandle_t que, audio_player_evt_callback cb, esp_p
     default_cfg.evt_que = NULL;
     default_cfg.resample_rate = 48000;
     default_cfg.in_stream_buf_size = 500 * 1024;
+    default_cfg.task_prio = 13;
 
     audio_player_cfg_t cfg = DEFAULT_AUDIO_PLAYER_CONFIG();
     cfg.external_ram_stack = true;
-    cfg.task_prio = 6;
+    cfg.task_prio = 13;
     cfg.task_stack = 3 * 1024;
     cfg.evt_cb = cb;
     cfg.evt_ctx = que;
     cfg.music_list = NULL;
     cfg.handle = setup_app_esp_audio_instance(&default_cfg, a2dp_cb);
 
-    esp_audio_output_stream_add(cfg.handle, i2s_stream_init(&i2s_writer));
+    g_player_i2s_write_handle = i2s_stream_init(&i2s_writer);
+    esp_audio_output_stream_add(cfg.handle, g_player_i2s_write_handle);
 
     audio_err_t ret = audio_player_init(&cfg);
     ret |= default_http_player_init();
@@ -197,5 +190,11 @@ esp_err_t app_player_init(QueueHandle_t que, audio_player_evt_callback cb, esp_p
     ret |= default_flash_tone_player_init();
     ret |= default_a2dp_player_init(bt_periph);
     ret |= default_raw_player_init();
+    ret |= audio_player_int_tone_init();
     return ESP_OK;
+}
+
+audio_element_handle_t app_player_get_i2s_handle(void)
+{
+    return g_player_i2s_write_handle;
 }
