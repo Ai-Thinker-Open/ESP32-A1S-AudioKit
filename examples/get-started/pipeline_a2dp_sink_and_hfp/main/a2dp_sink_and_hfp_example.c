@@ -30,6 +30,7 @@
 
 #include "i2s_stream.h"
 #include "periph_touch.h"
+#include "periph_button.h"
 #include "board.h"
 #include "bluetooth_service.h"
 #include "filter_resample.h"
@@ -194,7 +195,7 @@ const char *c_inband_ring_state_str[] = {
 static void bt_app_hf_client_audio_open(void)
 {
     ESP_LOGE(BT_HF_TAG, "bt_app_hf_client_audio_open");
-    int sample_rate = 8000;
+    int sample_rate = 16000;
     audio_element_info_t bt_info = {0};
     audio_element_getinfo(bt_stream_reader, &bt_info);
     bt_info.sample_rates = sample_rate;
@@ -388,6 +389,8 @@ void app_main(void)
     audio_board_handle_t board_handle = audio_board_init();
     audio_hal_ctrl_codec(board_handle->audio_hal, AUDIO_HAL_CODEC_MODE_BOTH, AUDIO_HAL_CTRL_START);
 
+    int player_volume;
+    audio_hal_get_volume(board_handle->audio_hal, &player_volume);
 
     ESP_LOGI(TAG, "[ 3 ] Create audio pipeline for playback");
     audio_pipeline_cfg_t pipeline_cfg = DEFAULT_AUDIO_PIPELINE_CONFIG();
@@ -397,10 +400,12 @@ void app_main(void)
     ESP_LOGI(TAG, "[3.1] Create i2s stream to write data to codec chip and read data from codec chip");
     i2s_stream_cfg_t i2s_cfg1 = I2S_STREAM_CFG_DEFAULT();
     i2s_cfg1.type = AUDIO_STREAM_WRITER;
+    i2s_cfg1.task_core = 1;
     i2s_stream_writer = i2s_stream_init(&i2s_cfg1);
 
     i2s_stream_cfg_t i2s_cfg2 = I2S_STREAM_CFG_DEFAULT();
     i2s_cfg2.type = AUDIO_STREAM_READER;
+    i2s_cfg2.task_core = 1;
     i2s_stream_reader = i2s_stream_init(&i2s_cfg2);
 
     raw_stream_cfg_t raw_cfg = RAW_STREAM_CFG_DEFAULT();
@@ -428,18 +433,13 @@ void app_main(void)
     esp_periph_config_t periph_cfg = DEFAULT_ESP_PERIPH_SET_CONFIG();
     esp_periph_set_handle_t set = esp_periph_set_init(&periph_cfg);
 
-    ESP_LOGI(TAG, "[4.1] Initialize Touch peripheral");
-    periph_touch_cfg_t touch_cfg = {
-        .touch_mask = BIT(get_input_set_id()) | BIT(get_input_play_id()) | BIT(get_input_volup_id()) | BIT(get_input_voldown_id()),
-        .tap_threshold_percent = 70,
-    };
-    esp_periph_handle_t touch_periph = periph_touch_init(&touch_cfg);
+    ESP_LOGI(TAG, "[4.1] Initialize keys on board");
+    audio_board_key_init(set);
 
     ESP_LOGI(TAG, "[4.2] Create Bluetooth peripheral");
     esp_periph_handle_t bt_periph = bluetooth_service_create_periph();
 
     ESP_LOGI(TAG, "[4.2] Start all peripherals");
-    esp_periph_start(set, touch_periph);
     esp_periph_start(set, bt_periph);
 
     ESP_LOGI(TAG, "[ 5 ] Set up  event listener");
@@ -484,9 +484,8 @@ void app_main(void)
             continue;
         }
 
-        if (msg.source_type == PERIPH_ID_TOUCH
-            && msg.cmd == PERIPH_TOUCH_TAP
-            && msg.source == (void *)touch_periph) {
+        if ((msg.source_type == PERIPH_ID_TOUCH || msg.source_type == PERIPH_ID_BUTTON || msg.source_type == PERIPH_ID_ADC_BTN)
+            && (msg.cmd == PERIPH_TOUCH_TAP || msg.cmd == PERIPH_BUTTON_PRESSED)) {
 
             if ((int) msg.data == get_input_play_id()) {
                 ESP_LOGI(TAG, "[ * ] [Play] touch tap event");
@@ -496,10 +495,20 @@ void app_main(void)
                 periph_bluetooth_pause(bt_periph);
             } else if ((int) msg.data == get_input_volup_id()) {
                 ESP_LOGI(TAG, "[ * ] [Vol+] touch tap event");
-                periph_bluetooth_next(bt_periph);
+                // periph_bluetooth_next(bt_periph);
+                player_volume += 10;
+                if (player_volume > 100) {
+                    player_volume = 100;
+                }
+                audio_hal_set_volume(board_handle->audio_hal, player_volume);
             } else if ((int) msg.data == get_input_voldown_id()) {
                 ESP_LOGI(TAG, "[ * ] [Vol-] touch tap event");
-                periph_bluetooth_prev(bt_periph);
+                // periph_bluetooth_prev(bt_periph);
+                player_volume -= 10;
+                if (player_volume < 0) {
+                    player_volume = 0;
+                }
+                audio_hal_set_volume(board_handle->audio_hal, player_volume);
             }
         }
 
