@@ -163,7 +163,7 @@ void record_playback_task()
             ESP_LOGE(TAG, "[ * ] Event interface error : %d", ret);
             continue;
         }
-        if ((int)msg.data == GPIO_NUM_39) {
+        if ((int)msg.data == get_input_play_id()) {
             ESP_LOGI(TAG, "STOP");
             break;
         }

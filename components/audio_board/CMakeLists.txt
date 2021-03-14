@@ -79,4 +79,13 @@ set(COMPONENT_SRCS
 )
 endif()
 
+if (CONFIG_HAMWIFI_BOARD)
+message(STATUS "Current board name is " CONFIG_HANWIFI_BOARD)
+list(APPEND COMPONENT_ADD_INCLUDEDIRS ./hamwifi)
+set(COMPONENT_SRCS
+./hamwifi/board.c
+./hamwifi/board_pins_config.c
+)
+endif()
+
 register_component()
