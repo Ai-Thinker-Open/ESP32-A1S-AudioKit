@@ -18,9 +18,8 @@
 #include "i2s_stream.h"
 #include "board.h"
 #include "hfp_stream.h"
-#include "audio_hal.h"
 
-static const char *TAG = "BLUETOOTH_EXAMPLE";
+static const char *TAG = "HFP_EXAMPLE";
 
 static audio_element_handle_t hfp_in_stream, hfp_out_stream, i2s_stream_writer, i2s_stream_reader;
 static audio_pipeline_handle_t pipeline_in, pipeline_out;
@@ -28,7 +27,16 @@ static audio_pipeline_handle_t pipeline_in, pipeline_out;
 static void bt_app_hf_client_audio_open(hfp_data_enc_type_t type)
 {
     ESP_LOGI(TAG, "bt_app_hf_client_audio_open type = %d", type);
-
+    int sample_rate = 8000;
+    if (type == HF_DATA_CVSD) {
+        sample_rate = 8000;
+    } else if (type == HF_DATA_MSBC) {
+        sample_rate = 16000;
+    } else {
+        ESP_LOGE(TAG, "error hfp enc type = %d", type);
+        }
+    i2s_stream_set_clk(i2s_stream_reader, sample_rate, 16, 1);
+    i2s_stream_set_clk(i2s_stream_writer, sample_rate, 16, 1);
     audio_pipeline_run(pipeline_out);
     audio_pipeline_resume(pipeline_out);
 }
@@ -52,7 +60,6 @@ void app_main(void)
     esp_log_level_set("*", ESP_LOG_INFO);
     esp_log_level_set(TAG, ESP_LOG_DEBUG);
 
-    ESP_LOGI(TAG, "[ 1 ] ############################");
     ESP_LOGI(TAG, "[ 1 ] init Bluetooth");
     ESP_ERROR_CHECK(esp_bt_controller_mem_release(ESP_BT_MODE_BLE));
 
@@ -76,7 +83,11 @@ void app_main(void)
     esp_bt_dev_set_device_name("ESP-ADF-HFP");
     hfp_open_and_close_evt_cb_register(bt_app_hf_client_audio_open, bt_app_hf_client_audio_close);
     hfp_service_init();
+#if (ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(4, 0, 0))
     esp_bt_gap_set_scan_mode(ESP_BT_CONNECTABLE, ESP_BT_GENERAL_DISCOVERABLE);
+#else
+    esp_bt_gap_set_scan_mode(ESP_BT_SCAN_MODE_CONNECTABLE_DISCOVERABLE);
+#endif
 
     ESP_LOGI(TAG, "[ 2 ] Start codec chip");
     audio_board_handle_t board_handle = audio_board_init();
@@ -90,16 +101,14 @@ void app_main(void)
     ESP_LOGI(TAG, "[3.1] Create i2s stream to write data to codec chip and read data from codec chip");
     i2s_stream_cfg_t i2s_cfg1 = I2S_STREAM_CFG_DEFAULT();
     i2s_cfg1.type = AUDIO_STREAM_READER;
-    i2s_cfg1.task_core = 1;
+#if defined CONFIG_ESP_LYRAT_MINI_V1_1_BOARD
+    i2s_cfg1.i2s_config.use_apll = false;
+    i2s_cfg1.i2s_port = 1;
+#endif
     i2s_stream_reader = i2s_stream_init(&i2s_cfg1);
-
     i2s_stream_cfg_t i2s_cfg2 = I2S_STREAM_CFG_DEFAULT();
     i2s_cfg2.type = AUDIO_STREAM_WRITER;
-    i2s_cfg2.task_core = 1;
     i2s_stream_writer = i2s_stream_init(&i2s_cfg2);
-
-    i2s_stream_set_clk(i2s_stream_reader, 16000, 16, 1);
-    i2s_stream_set_clk(i2s_stream_writer, 16000, 16, 1);
 
     ESP_LOGI(TAG, "[3.2] Get hfp stream");
     hfp_stream_config_t hfp_config;
@@ -148,11 +157,6 @@ void app_main(void)
             continue;
         }
 
-        if (msg.cmd == AEL_MSG_CMD_ERROR) {
-            ESP_LOGE(TAG, "[ * ] Action command error: src_type:%d, source:%p cmd:%d, data:%p, data_len:%d",
-                     msg.source_type, msg.source, msg.cmd, msg.data, msg.data_len);
-        }
-
         /* Stop when the last pipeline element (i2s_stream_writer in this case) receives stop event */
         if (msg.source_type == AUDIO_ELEMENT_TYPE_ELEMENT && msg.source == (void *) i2s_stream_writer
             && msg.cmd == AEL_MSG_CMD_REPORT_STATUS && (int) msg.data == AEL_STATUS_STATE_STOPPED) {
@@ -195,5 +199,3 @@ void app_main(void)
     audio_element_deinit(hfp_out_stream);
     esp_periph_set_destroy(set);
 }
-
-

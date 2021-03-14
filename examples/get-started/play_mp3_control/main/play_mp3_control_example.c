@@ -37,10 +37,6 @@ extern const uint8_t adf_music_mp3_start[] asm("_binary_adf_music_mp3_start");
 extern const uint8_t adf_music_mp3_end[]   asm("_binary_adf_music_mp3_end");
 static int adf_music_mp3_pos;
 
-void mp3_music_goto_begin(){
-    adf_music_mp3_pos = 0;
-}
-
 int mp3_music_read_cb(audio_element_handle_t el, char *buf, int len, TickType_t wait_time, void *ctx)
 {
     int read_size = adf_music_mp3_end - adf_music_mp3_start - adf_music_mp3_pos;
@@ -120,8 +116,6 @@ void app_main(void)
             ESP_LOGE(TAG, "[ * ] Event interface error : %d", ret);
             continue;
         }
-        
-        // ESP_LOGI(TAG, "[ * ] Receive event source_type:%d ,cmd:%d",msg.source_type,msg.cmd);
 
         if (msg.source_type == AUDIO_ELEMENT_TYPE_ELEMENT && msg.source == (void *) mp3_decoder
             && msg.cmd == AEL_MSG_CMD_REPORT_MUSIC_INFO) {
@@ -135,15 +129,6 @@ void app_main(void)
             i2s_stream_set_clk(i2s_stream_writer, music_info.sample_rates, music_info.bits, music_info.channels);
             continue;
         }
-
-        if (msg.source_type == AUDIO_ELEMENT_TYPE_ELEMENT && msg.source == (void *) i2s_stream_writer
-             && msg.cmd == AEL_MSG_CMD_REPORT_STATUS) {
-            audio_element_state_t state = audio_element_get_state(msg.source);
-            if(state == AEL_STATE_FINISHED){
-                ESP_LOGI(TAG, "[ * ] Receive music finished");
-            }
-        }
-
 
         if ((msg.source_type == PERIPH_ID_TOUCH || msg.source_type == PERIPH_ID_BUTTON || msg.source_type == PERIPH_ID_ADC_BTN)
             && (msg.cmd == PERIPH_TOUCH_TAP || msg.cmd == PERIPH_BUTTON_PRESSED || msg.cmd == PERIPH_ADC_BUTTON_PRESSED)) {
@@ -166,11 +151,11 @@ void app_main(void)
                         break;
                     case AEL_STATE_FINISHED :
                         ESP_LOGI(TAG, "[ * ] Rewinding audio pipeline");
-                        audio_pipeline_stop(pipeline);
-                        audio_pipeline_wait_for_stop(pipeline);
-                        mp3_music_goto_begin();
                         audio_pipeline_reset_ringbuffer(pipeline);
-                        audio_pipeline_resume(pipeline);
+                        audio_pipeline_reset_elements(pipeline);
+                        audio_pipeline_change_state(pipeline, AEL_STATE_INIT);
+                        adf_music_mp3_pos = 0;
+                        audio_pipeline_run(pipeline);
                         break;
                     default :
                         ESP_LOGI(TAG, "[ * ] Not supported state %d", el_state);
@@ -178,10 +163,7 @@ void app_main(void)
             } else if ((int) msg.data == get_input_set_id()) {
                 ESP_LOGI(TAG, "[ * ] [Set] touch tap event");
                 ESP_LOGI(TAG, "[ * ] Stopping audio pipeline");
-                audio_pipeline_stop(pipeline);
-                audio_pipeline_wait_for_stop(pipeline);
-                mp3_music_goto_begin();
-                audio_pipeline_reset_ringbuffer(pipeline);
+                break;
             } else if ((int) msg.data == get_input_volup_id()) {
                 ESP_LOGI(TAG, "[ * ] [Vol+] touch tap event");
                 player_volume += 10;

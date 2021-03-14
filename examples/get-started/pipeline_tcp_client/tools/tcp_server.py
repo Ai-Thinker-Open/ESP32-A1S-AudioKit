@@ -37,7 +37,7 @@ def log_info(value):
 
 def start_tcp_server(ip, port):
 
-    fo = open("esp32.mp3", "rb+")
+    fo = open("esp32.mp3", "r+")
     fsize = os.path.getsize(FILE_PATH+FILE_NAME)
     print ("Get the %s size is %d" % (FILE_NAME, fsize))
 
@@ -59,7 +59,7 @@ def start_tcp_server(ip, port):
     print("waiting for client to connect")
     client, addr = sock.accept()
     send_msg = "get msg, will download"
-    client.send(send_msg.encode())
+    client.send(send_msg)
     global read_size
     while True:
         file_msg = fo.read(1024)
@@ -67,10 +67,8 @@ def start_tcp_server(ip, port):
         print('total size \033[1;35m [%d/%d] \033[0m' % (read_size, fsize))
         if (len(file_msg) <= 0):
             print("get all data for %s" % FILE_NAME)
-            fo.seek(0,0)
-            read_size = 0
-        else:
-            client.send(file_msg)
+            break
+        client.send(file_msg)
  
     fo.close()
     client.close()
