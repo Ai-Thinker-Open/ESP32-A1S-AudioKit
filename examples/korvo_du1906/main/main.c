@@ -23,6 +23,20 @@
 #include "display_service.h"
 #include "bdsc_json.h"
 #include "audio_mem.h"
+#include "app_voice_control.h"
+#include "app_bt_init.h"
+
+#if __has_include("esp_idf_version.h")
+#include "esp_idf_version.h"
+#else
+#define ESP_IDF_VERSION_VAL(major, minor, patch) 1
+#endif
+
+#if (ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(4, 1, 0))
+#include "esp_netif.h"
+#else
+#include "tcpip_adapter.h"
+#endif
 
 #define TAG "MAIN"
 
@@ -31,7 +45,6 @@ bool need_skip_current_playing()
     /* 用户在某些特定应用场景下需要跳过当前session的 asr tts 处理 */
     return false;
 }
-
 
 esp_err_t my_bdsc_engine_event_handler(bdsc_engine_event_t *evt)
 {
@@ -68,8 +81,8 @@ esp_err_t my_bdsc_engine_event_handler(bdsc_engine_event_t *evt)
         /*
          * 用户通过 “唤醒词 + 命令” 进行交互时，云端返回的ASR结果。
          * 返回的 evt 类型如下：
-         * evt->data     为 bdsc_engine_event_data_t 结构体指针
-         * evt->data_len 为 bdsc_engine_event_data_t 结构体大小
+         * evt->data     为 bdsc_event_data_t 结构体指针
+         * evt->data_len 为 bdsc_event_data_t 结构体大小
          * evt->client   为 全局 bdsc_engine_handle_t 实例对象
          * 结构体定义如下：
          *
@@ -77,8 +90,8 @@ esp_err_t my_bdsc_engine_event_handler(bdsc_engine_event_t *evt)
             char sn[SN_LENGTH];      // 在语音链路中，每个request都对应一个sn码，方便追溯问题。
             int16_t idx;             // 序号
             uint16_t buffer_length;  // 数据包长度
-            uint8_t *buffer;        // 数据
-        } bdsc_engine_event_data_t;
+            uint8_t buffer[];        // 数据
+        } bdsc_event_data_t;
          *
          * 返回的 buffer 数据为 JSON 格式。格式如下：
          * 以“问：今天天气”为例，返回：
@@ -96,18 +109,21 @@ esp_err_t my_bdsc_engine_event_handler(bdsc_engine_event_t *evt)
          */
 
         /* 通过语音控制蓝牙打开 */
-        bdsc_engine_event_data_t *asr_result = (bdsc_engine_event_data_t *)evt->data;
+        bdsc_event_data_t *asr_result = (bdsc_event_data_t *)evt->data;
         if (!asr_result->buffer) {
             ESP_LOGE(TAG, "BUG!!!\n");
             return BDSC_CUSTOM_DESIRE_DEFAULT;
         }
+
         if (strstr((char *)asr_result->buffer, "打开") && strstr((char *)asr_result->buffer, "蓝牙")) {
+            app_bt_start();
             bdsc_engine_open_bt();
             return BDSC_CUSTOM_DESIRE_DEFAULT;
         }
         /* 通过语音控制蓝牙关闭 */
         if (strstr((char *)asr_result->buffer, "关闭") && strstr((char *)asr_result->buffer, "蓝牙")) {
             bdsc_engine_close_bt();
+            app_bt_stop();
             return BDSC_CUSTOM_DESIRE_DEFAULT;
         }
 
@@ -123,7 +139,6 @@ esp_err_t my_bdsc_engine_event_handler(bdsc_engine_event_t *evt)
         }
 
         if (err_value == -3005) {
-            // bdsc_play_hint(BDSC_HINT_NOT_FIND);
             BdsJsonPut(json);
             return BDSC_CUSTOM_DESIRE_RESUME;
         }
@@ -165,6 +180,22 @@ esp_err_t my_bdsc_engine_event_handler(bdsc_engine_event_t *evt)
          *
          * TIPS: 随 NLP 一起下发的TTS语音流，由SDK自动播放，暂时不对用户开放。
          */
+
+        cJSON *j_content;
+        /* 某些情况下，需要跳过当前会话 */
+        if (need_skip_current_playing()) {
+            ESP_LOGI(TAG, "skip playing");
+            return BDSC_CUSTOM_DESIRE_SKIP_DEFAULT;
+        }
+        if (!(j_content = BdsJsonParse((const char *)evt->data))) {
+            ESP_LOGE(TAG, "json format error");
+            return BDSC_CUSTOM_DESIRE_SKIP_DEFAULT;
+        }
+
+        app_voice_control_feed_data(j_content, NULL);
+
+        BdsJsonPut(j_content);
+
         return BDSC_CUSTOM_DESIRE_DEFAULT;
 
     case BDSC_EVENT_ON_CHANNEL_DATA:
@@ -195,7 +226,11 @@ void app_main(void)
         ret = nvs_flash_init();
     }
     ESP_ERROR_CHECK(ret);
+#if (ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(4, 1, 0))
+    ESP_ERROR_CHECK(esp_netif_init());
+#else
     tcpip_adapter_init();
+#endif
 
     bdsc_engine_config_t cfg = {
         .log_level = 0,
@@ -211,5 +246,5 @@ void app_main(void)
 
     bdsc_engine_init(&cfg);
 
-    // start_sys_monitor();
+    start_sys_monitor();
 }

@@ -42,8 +42,18 @@ static esp_err_t input_key_service_cb(periph_service_handle_t handle, periph_ser
                 ESP_LOGI(TAG, "[ * ] [Set] pause");
                 periph_bt_pause(bt_periph);
                 break;
+#if (ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(4, 0, 0))
+            case INPUT_KEY_USER_ID_VOLUP:
+                ESP_LOGI(TAG, "[ * ] [long Vol+] Vol+");
+                periph_bt_volume_up(bt_periph);
+                break;
+            case INPUT_KEY_USER_ID_VOLDOWN:
+                ESP_LOGI(TAG, "[ * ] [long Vol-] Vol-");
+                periph_bt_volume_down(bt_periph);
+                break;
+#endif
         }
-    } else if (evt->type == INPUT_KEY_SERVICE_ACTION_PRESS_RELEASE) {
+    } else if (evt->type == INPUT_KEY_SERVICE_ACTION_PRESS) {
         ESP_LOGI(TAG, "[ * ] input key id is %d", (int)evt->data);
         switch ((int)evt->data) {
             case INPUT_KEY_USER_ID_VOLUP:
@@ -86,7 +96,11 @@ void app_main(void)
 
     esp_bt_dev_set_device_name("ESP_SINK_STREAM_DEMO");
 
+#if (ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(4, 0, 0))
+    esp_bt_gap_set_scan_mode(ESP_BT_CONNECTABLE, ESP_BT_GENERAL_DISCOVERABLE);
+#else
     esp_bt_gap_set_scan_mode(ESP_BT_SCAN_MODE_CONNECTABLE_DISCOVERABLE);
+#endif
 
     ESP_LOGI(TAG, "[ 2 ] Start codec chip");
     audio_board_handle_t board_handle = audio_board_init();
@@ -105,6 +119,9 @@ void app_main(void)
     a2dp_stream_config_t a2dp_config = {
         .type = AUDIO_STREAM_READER,
         .user_callback = {0},
+#if (ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(4, 0, 0))
+        .audio_hal = board_handle->audio_hal,
+#endif
     };
     bt_stream_reader = a2dp_stream_init(&a2dp_config);
 
@@ -167,11 +184,6 @@ void app_main(void)
             continue;
         }
 
-        if (msg.cmd == AEL_MSG_CMD_ERROR) {
-            ESP_LOGI(TAG, "[ * ] Action command: src_type:%d, source:%p cmd:%d, data:%p, data_len:%d",
-                     msg.source_type, msg.source, msg.cmd, msg.data, msg.data_len);
-        }
-
         if (msg.source_type == AUDIO_ELEMENT_TYPE_ELEMENT && msg.source == (void *) bt_stream_reader
             && msg.cmd == AEL_MSG_CMD_REPORT_MUSIC_INFO) {
             audio_element_info_t music_info = {0};
@@ -224,7 +236,6 @@ void app_main(void)
     audio_element_deinit(i2s_stream_writer);
     esp_periph_set_destroy(set);
     periph_service_destroy(input_ser);
-    a2dp_destroy();
     esp_bluedroid_disable();
     esp_bluedroid_deinit();
     esp_bt_controller_disable();

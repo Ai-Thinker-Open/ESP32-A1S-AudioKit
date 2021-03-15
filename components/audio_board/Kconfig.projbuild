@@ -23,13 +23,15 @@ config ESP32_S2_KALUGA_1_V1_2_BOARD
     bool "ESP32-S2-Kaluga-1 v1.2"
 config ESP_AI_THINKER_V2_2_BOARD
     bool "ESP32-AiThinker-audio V2.2"
+config HAMWIFI_BOARD
+    bool "HAMWIFI"
 
 endchoice
 
 choice ESP32_KORVO_DU1906_DAC
     prompt "ESP32 KORVO DU1906 Board DAC chip"
     depends on ESP32_KORVO_DU1906_BOARD
-    default ESP32_KORVO_DU1906_CODEC_TAS5805M
+    default ESP32_KORVO_DU1906_DAC_TAS5805M
     help
         Select DAC chip to use on ESP32_KORVO_DU1906 board
 

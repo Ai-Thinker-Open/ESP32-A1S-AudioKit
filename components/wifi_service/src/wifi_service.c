@@ -44,7 +44,7 @@
 #if __has_include("esp_idf_version.h")
 #include "esp_idf_version.h"
 #else
-#define ESP_IDF_VERSION_VAL(major, minor, patch) 0
+#define ESP_IDF_VERSION_VAL(major, minor, patch) 1
 #endif
 
 static const char *TAG                  = "WIFI_SERV";
@@ -84,6 +84,8 @@ typedef struct {
     EventGroupHandle_t                  sync_evt;
     int                                 retry_times;
     int                                 max_retry_time;
+    int                                 prov_retry_times;
+    int                                 max_prov_retry_time;
     bool                                retrying;
 } wifi_service_t;
 
@@ -127,7 +129,7 @@ static void wifi_serv_state_send(void *que, int type, void *data, int len, int d
     }
 }
 
-#if (ESP_IDF_VERSION > ESP_IDF_VERSION_VAL(3, 3, 2))
+#if (ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(4, 0, 0))
 static void wifi_event_cb(void *arg, esp_event_base_t event_base,
                           int32_t event_id, void *event_data)
 {
@@ -143,6 +145,7 @@ static void wifi_event_cb(void *arg, esp_event_base_t event_base,
         wifi_event_sta_disconnected_t *event = (wifi_event_sta_disconnected_t *) event_data;
         if (serv->reason == WIFI_SERV_STA_BY_USER) {
             ESP_LOGI(TAG, "SYSTEM_EVENT_STA_DISCONNECTED, reason is WIFI_SERV_STA_BY_USER");
+            wifi_serv_state_send(serv->wifi_serv_que, WIFI_SERV_EVENT_DISCONNECTED, 0, 0, 0);
             return;
         }
         wifi_serv_state_send(serv->wifi_serv_que, WIFI_SERV_EVENT_DISCONNECTED, 0, 0, 0);
@@ -190,11 +193,12 @@ static esp_err_t wifi_event_cb(void *ctx, system_event_t *event)
             wifi_serv_state_send(serv->wifi_serv_que, WIFI_SERV_EVENT_CONNECTED, 0, 0, 0);
             break;
         case SYSTEM_EVENT_STA_DISCONNECTED:
-            if (serv->reason == WIFI_SERV_STA_BY_USER) {
-                ESP_LOGI(TAG, "SYSTEM_EVENT_STA_DISCONNECTED, reason is WIFI_SERV_STA_BY_USER");
+            if (serv->reason == WIFI_SERV_STA_BY_USER || serv->reason == WIFI_SERV_STA_SET_INFO) {
+                ESP_LOGI(TAG, "SYSTEM_EVENT_STA_DISCONNECTED, reason is %d", serv->reason);
+                wifi_serv_state_send(serv->wifi_serv_que, WIFI_SERV_EVENT_DISCONNECTED, 0, 0, 0);
                 break;
             }
-            wifi_serv_state_send(serv->wifi_serv_que, WIFI_SERV_EVENT_DISCONNECTED, 0, 0, 0);
+
             switch (event->event_info.disconnected.reason) {
                 case WIFI_REASON_AUTH_EXPIRE:
                 case WIFI_REASON_4WAY_HANDSHAKE_TIMEOUT:
@@ -214,6 +218,7 @@ static esp_err_t wifi_event_cb(void *ctx, system_event_t *event)
                     serv->reason = WIFI_SERV_STA_COM_ERROR;
                     break;
             }
+            wifi_serv_state_send(serv->wifi_serv_que, WIFI_SERV_EVENT_DISCONNECTED, 0, 0, 0);
             break;
         case SYSTEM_EVENT_AP_STACONNECTED:
             ESP_LOGI(TAG, "Station:"MACSTR" join, AID=%d",
@@ -241,7 +246,7 @@ esp_err_t configure_wifi_sta_mode(wifi_config_t *wifi_cfg)
 
 static void wifi_sta_setup(void *para)
 {
-#if (ESP_IDF_VERSION > ESP_IDF_VERSION_VAL(3, 3, 2))
+#if (ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(4, 0, 0))
     ESP_ERROR_CHECK(esp_event_loop_create_default());
     ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &wifi_event_cb, para));
     ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &wifi_event_cb, para));
@@ -255,7 +260,7 @@ static void wifi_sta_setup(void *para)
 #endif
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
     ESP_ERROR_CHECK(esp_wifi_init(&cfg));
-    ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_FLASH));
+    ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_RAM));
 }
 
 static esp_err_t wifi_init(void *instance, action_arg_t *arg, action_result_t *result)
@@ -333,6 +338,7 @@ static void wifi_task(void *pvParameters)
                 if (wifi_msg.type == WIFI_SERV_EVENT_CONNECTED) {
                     serv->reason = WIFI_SERV_STA_UNKNOWN;
                     serv->retry_times = 0;
+                    serv->prov_retry_times = 0;
                     serv->retrying = false;
                     if (serv->is_setting) {
                         esp_timer_stop(serv->setting_timer);
@@ -343,12 +349,12 @@ static void wifi_task(void *pvParameters)
                             item->running = false;
                             esp_wifi_setting_teardown(item->on_handle, NULL);
                         }
+                        serv->is_setting = false;
                     }
                     wifi_ssid_manager_save(serv->ssid_manager, (const char *)wifi_cfg.sta.ssid,  (const char *)wifi_cfg.sta.password);
                 }
                 if (wifi_msg.type == WIFI_SERV_EVENT_DISCONNECTED) {
-                    if ((serv->reason != WIFI_SERV_STA_BY_USER)
-                        ) {
+                    if ((serv->reason != WIFI_SERV_STA_BY_USER) && (serv->reason != WIFI_SERV_STA_SET_INFO)) {
                         retry_interval = serv->retry_times * 1000 * 1000 * 2;
                         if (retry_interval > 60 * 1000 * 1000) { // Longest interval is 60s
                             retry_interval = 60 * 1000 * 1000;
@@ -381,24 +387,39 @@ static void wifi_task(void *pvParameters)
                             ESP_LOGW(TAG, "Got max_retry_time = %d, the station will try to reconnect until connected", serv->max_retry_time);
                         }
                         ESP_LOGW(TAG, "Disconnect reason %d", serv->reason);
-                        continue;
+                    } else if (serv->reason == WIFI_SERV_STA_SET_INFO) {
+                        if (serv->prov_retry_times < serv->max_prov_retry_time) {
+                            vTaskDelay(2000 / portTICK_PERIOD_MS);
+                            configure_wifi_sta_mode(&wifi_cfg);
+                            wifi_service_connect(serv_handle);
+                            serv->prov_retry_times ++;
+                            ESP_LOGW(TAG, "Fail to connect to provision wifi, reason: %d, start to reconnect ...", serv->reason);
+                        } else {
+                            serv->prov_retry_times = 0;
+                            serv->reason = WIFI_SERV_STA_UNKNOWN;
+                            ESP_LOGE(TAG, "Please configure wifi again");
+                            cb_evt.type = WIFI_SERV_EVENT_SETTING_FAILED;
+                        }
+                    } else if (serv->reason == WIFI_SERV_STA_BY_USER) {
+                        serv->reason = WIFI_SERV_STA_UNKNOWN;
                     }
                 }
                 periph_service_callback(serv_handle, &cb_evt);
             } else if (wifi_msg.msg_type == WIFI_SERV_EVENT_TYPE_CMD) {
                 if (wifi_msg.type == WIFI_SERV_CMD_CONNECT) {
-                    if (wifi_ssid_manager_get_latest_config(serv->ssid_manager, &wifi_cfg) != ESP_OK) {
-                        ESP_LOGW(TAG, "No ssid stored in flash, try to connect to wifi set by wifi_service_set_sta_info()");
-                        if (serv->info.sta.ssid[0] == 0) {
-                            ESP_LOGW(TAG, "There is no preset ssid, please set the wifi first");
-                            continue;
+                    if (serv->reason != WIFI_SERV_STA_SET_INFO) {
+                        if (wifi_ssid_manager_get_latest_config(serv->ssid_manager, &wifi_cfg) != ESP_OK) {
+                            ESP_LOGW(TAG, "No ssid stored in flash, try to connect to wifi set by wifi_service_set_sta_info()");
+                            if (serv->info.sta.ssid[0] == 0) {
+                                ESP_LOGW(TAG, "There is no preset ssid, please set the wifi first");
+                                continue;
+                            }
+                            memcpy(&wifi_cfg, &serv->info, sizeof(wifi_config_t));
                         }
-                        memcpy(&wifi_cfg, &serv->info, sizeof(wifi_config_t));
                     }
                     ESP_LOGI(TAG, "Connect to wifi ssid: %s, pwd: %s", wifi_cfg.sta.ssid, wifi_cfg.sta.password);
                     configure_wifi_sta_mode(&wifi_cfg);
                     ESP_ERROR_CHECK(esp_wifi_connect());
-
                 } else if (wifi_msg.type == WIFI_SERV_CMD_DISCONNECT) {
                     serv->reason = WIFI_SERV_STA_BY_USER;
                     ESP_LOGI(TAG, "WIFI_SERV_CMD_DISCONNECT");
@@ -438,14 +459,25 @@ static void wifi_task(void *pvParameters)
                     serv->is_setting = false;
                 } else if (wifi_msg.type == WIFI_SERV_CMD_DESTROY) {
                     task_run = false;
-                    ESP_LOGI(TAG, "DUER_CMD_DESTROY");
+                    ESP_LOGI(TAG, "WIFI_SERV_CMD_DESTROY");
                 } else if (wifi_msg.type == WIFI_SERV_CMD_UPDATE) {
                     wifi_config_t *info = (wifi_config_t *)wifi_msg.pdata;
-                    ESP_LOGI(TAG, "WIFI_SERV_CMD_UPDATE got ssid: %s, pwd: %s", info->sta.ssid, info->sta.password);
-                    memcpy(&wifi_cfg, info, sizeof(wifi_config_t));
-                    configure_wifi_sta_mode(&wifi_cfg);
-                    esp_wifi_connect();
-                    audio_free(info);
+                    if (serv->is_setting) {
+                        ESP_LOGI(TAG, "WIFI_SERV_CMD_UPDATE got ssid: %s, pwd: %s", info->sta.ssid, info->sta.password);
+                        serv->reason = WIFI_SERV_STA_SET_INFO;
+                        memcpy(&wifi_cfg, info, sizeof(wifi_config_t));
+                        configure_wifi_sta_mode(&wifi_cfg);
+                        esp_wifi_connect();
+                        audio_free(info);
+
+                        cb_evt.type = WIFI_SERV_EVENT_SETTING_FINISHED;
+                        cb_evt.source = serv_handle;
+                        cb_evt.data = NULL;
+                        cb_evt.len = 0;
+                        periph_service_callback(serv_handle, &cb_evt);
+                    } else {
+                        ESP_LOGW(TAG, "Not setting state, ignore the wifi information, ssid: %s, pwd: %s", info->sta.ssid, info->sta.password);
+                    }
                 }
             } else {
                 ESP_LOGI(TAG, "Not supported event type");
@@ -590,6 +622,12 @@ esp_err_t wifi_service_erase_ssid_manager_info(periph_service_handle_t handle)
     return ret;
 }
 
+esp_err_t wifi_service_get_last_ssid_cfg(periph_service_handle_t handle, wifi_config_t* wifi_cfg)
+{
+    wifi_service_t *serv = periph_service_get_data(handle);
+    return wifi_ssid_manager_get_latest_config(serv->ssid_manager, wifi_cfg);
+}
+
 periph_service_handle_t wifi_service_create(wifi_service_config_t *config)
 {
     wifi_service_t *serv =  audio_calloc(1, sizeof(wifi_service_t));
@@ -601,6 +639,7 @@ periph_service_handle_t wifi_service_create(wifi_service_config_t *config)
         return NULL;
     });
     serv->max_retry_time = config->max_retry_time;
+    serv->max_prov_retry_time = config->max_prov_retry_time;
 
     STAILQ_INIT(&serv->setting_list);
     serv->wifi_serv_que = xQueueCreate(3, sizeof(wifi_task_msg_t));

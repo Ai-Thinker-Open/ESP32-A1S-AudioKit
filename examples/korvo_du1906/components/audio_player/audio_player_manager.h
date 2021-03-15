@@ -205,7 +205,7 @@ audio_err_t ap_manager_get_mode(audio_player_mode_t *mode);
  *      - ESP_ERR_AUDIO_NO_ERROR: on success
  *      - ESP_ERR_AUDIO_NOT_READY: no audio player instance
  */
-audio_err_t ap_manager_event_register(void *que);
+audio_err_t ap_manager_event_register(xQueueHandle que);
 
 /**
  * @brief Remove registered queue instance from audio player manager
@@ -322,6 +322,15 @@ audio_err_t ap_manager_prev(void);
  *      - ESP_ERR_AUDIO_NOT_READY: the status is neither running nor paused
  */
 audio_err_t ap_manager_seek(int seek_time_sec);
+
+/*
+ * @brief Clear backup audio info.
+ *
+ * @return
+ *      - ESP_ERR_AUDIO_NO_ERROR: on success
+ *      - ESP_ERR_AUDIO_INVALID_PARAMETER: invalid arguments
+ */
+audio_err_t ap_manager_clear_audio_info(void);
 
 #ifdef __cplusplus
 }

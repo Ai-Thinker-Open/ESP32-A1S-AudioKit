@@ -47,3 +47,7 @@ COMPONENT_ADD_INCLUDEDIRS += ./ai_thinker_audio_kit_v2_2
 COMPONENT_SRCDIRS += ./ai_thinker_audio_kit_v2_2
 endif
 
+ifdef CONFIG_HAMWIFI_BOARD
+COMPONENT_ADD_INCLUDEDIRS += ./hamwifi
+COMPONENT_SRCDIRS += ./hamwifi
+endif

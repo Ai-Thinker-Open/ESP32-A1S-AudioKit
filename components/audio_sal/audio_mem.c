@@ -29,6 +29,7 @@
 #include "esp_log.h"
 #include "audio_mem.h"
 #include "esp_heap_caps.h"
+#include "esp_efuse.h"
 
 // #define ENABLE_AUDIO_MEM_TRACE
 
@@ -104,10 +105,12 @@ char *audio_strdup(const char *str)
 void *audio_calloc_inner(size_t n, size_t size)
 {
     void *data =  NULL;
-    data = heap_caps_malloc(n * size, MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
-    if (data) {
-        memset(data, 0, n * size);
-    }
+#if CONFIG_SPIRAM_BOOT_INIT
+    data = heap_caps_calloc_prefer(n, size, 2,  MALLOC_CAP_DEFAULT | MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT, MALLOC_CAP_DEFAULT | MALLOC_CAP_SPIRAM);
+#else
+    data = heap_caps_calloc(n, size, MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
+#endif
+
 #ifdef ENABLE_AUDIO_MEM_TRACE
     ESP_LOGI("AUIDO_MEM", "calloc_inner:%p, size:%d, called:0x%08x", data, size, (intptr_t)__builtin_return_address(0) - 2);
 #endif
@@ -131,6 +134,26 @@ bool audio_mem_spiram_is_enabled(void)
 }
 #else
 bool audio_mem_spiram_is_enabled(void)
+{
+    return false;
+}
+#endif
+
+#if defined(CONFIG_SPIRAM_BOOT_INIT) && (CONFIG_SPIRAM_ALLOW_STACK_EXTERNAL_MEMORY)
+bool audio_mem_spiram_stack_is_enabled(void)
+{
+    bool ret = true;
+#if CONFIG_IDF_TARGET_ESP32
+    uint8_t chip_ver = esp_efuse_get_chip_ver();
+    if (chip_ver < 3) {
+        ESP_LOGW("AUIDO_MEM", "Can't support stack on external memory due to ESP32 chip is %d", chip_ver);
+        ret = false;
+    }
+#endif
+    return ret;
+}
+#else
+bool audio_mem_spiram_stack_is_enabled(void)
 {
     return false;
 }

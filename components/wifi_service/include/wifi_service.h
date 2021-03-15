@@ -42,6 +42,7 @@ typedef enum {
     WIFI_SERV_EVENT_CONNECTED,
     WIFI_SERV_EVENT_DISCONNECTED,
     WIFI_SERV_EVENT_SETTING_TIMEOUT,
+    WIFI_SERV_EVENT_SETTING_FAILED,
     WIFI_SERV_EVENT_SETTING_FINISHED,
 } wifi_service_event_t;
 
@@ -54,6 +55,7 @@ typedef enum {
     WIFI_SERV_STA_AUTH_ERROR,
     WIFI_SERV_STA_AP_NOT_FOUND,
     WIFI_SERV_STA_BY_USER,
+    WIFI_SERV_STA_SET_INFO,
 } wifi_service_disconnect_reason_t;
 
 /**
@@ -69,6 +71,7 @@ typedef struct {
     char                        *user_data;             /*!< User data */
     int                         setting_timeout_s;      /*!< Timeout of setting WiFi */
     int                         max_retry_time;         /*!< Maximum times of reconnection */
+    int                         max_prov_retry_time;    /*!< Maximum times of reconnection after wifi provision*/
     uint8_t                     max_ssid_num;           /*!< Maximum ssid that can be stored */
 } wifi_service_config_t;
 
@@ -82,6 +85,7 @@ typedef struct {
     .user_data = NULL, \
     .setting_timeout_s = 60, \
     .max_retry_time = 5,\
+    .max_prov_retry_time = 3, \
     .max_ssid_num = 5, \
 }
 
@@ -226,6 +230,19 @@ wifi_service_disconnect_reason_t wifi_service_disconnect_reason_get(periph_servi
  *     - Others, Fail
  */
 esp_err_t wifi_service_erase_ssid_manager_info(periph_service_handle_t handle);
+
+
+/*
+ * @brief Get the last wifi configure
+ *
+ * @param handle    The periph_service_handle_t instance
+ * @param wifi_cfg  A pointer to wifi_config_t
+ *
+ * @return
+ *     - ESP_OK, Success
+ *     - Others, Fail
+ */
+esp_err_t wifi_service_get_last_ssid_cfg(periph_service_handle_t handle, wifi_config_t* wifi_cfg);
 
 #ifdef __cplusplus
 }

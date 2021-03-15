@@ -47,3 +47,4 @@ coverage_report/
 
 .vscode
 mycode
+/examples/player/pipeline_http_opus/sdkconfig.defaults

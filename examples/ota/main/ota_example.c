@@ -21,12 +21,23 @@
 #include "nvs_flash.h"
 #include "periph_sdcard.h"
 #include "periph_wifi.h"
-#include "tcpip_adapter.h"
 
 #include "audio_mem.h"
 #include "ota_service.h"
 #include "ota_proc_default.h"
 #include "tone_partition.h"
+
+#if __has_include("esp_idf_version.h")
+#include "esp_idf_version.h"
+#else
+#define ESP_IDF_VERSION_VAL(major, minor, patch) 1
+#endif
+
+#if (ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(4, 1, 0))
+#include "esp_netif.h"
+#else
+#include "tcpip_adapter.h"
+#endif
 
 static const char *TAG = "HTTPS_OTA_EXAMPLE";
 static EventGroupHandle_t events = NULL;
@@ -141,7 +152,11 @@ void app_main()
         err = nvs_flash_init();
     }
     ESP_ERROR_CHECK(err);
+#if (ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(4, 1, 0))
+    ESP_ERROR_CHECK(esp_netif_init());
+#else
     tcpip_adapter_init();
+#endif
 
     ESP_LOGI(TAG, "[1.0] Initialize peripherals management");
     esp_periph_config_t periph_cfg = DEFAULT_ESP_PERIPH_SET_CONFIG();
@@ -157,7 +172,7 @@ void app_main()
     periph_wifi_wait_for_connected(wifi_handle, portMAX_DELAY);
 
     ESP_LOGI(TAG, "[1.2] Mount SDCard");
-    audio_board_sdcard_init(set);
+    audio_board_sdcard_init(set, SD_MODE_1_LINE);
 
     ESP_LOGI(TAG, "[2.0] Create OTA service");
     ota_service_config_t ota_service_cfg = OTA_SERVICE_DEFAULT_CONFIG();

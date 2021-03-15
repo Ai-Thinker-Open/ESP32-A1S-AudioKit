@@ -134,7 +134,10 @@ int rb_bytes_available(ringbuf_handle_t rb)
 
 int rb_bytes_filled(ringbuf_handle_t rb)
 {
-    return rb->fill_cnt;
+    if (rb) {
+        return rb->fill_cnt;
+    }
+    return ESP_FAIL;
 }
 
 static void rb_release(SemaphoreHandle_t handle)
@@ -338,7 +341,6 @@ esp_err_t rb_abort(ringbuf_handle_t rb)
     }
     esp_err_t err = rb_abort_read(rb);
     err |= rb_abort_write(rb);
-    xSemaphoreGive(rb->lock);
     return err;
 }
 

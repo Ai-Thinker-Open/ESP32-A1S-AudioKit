@@ -2,7 +2,7 @@ set(COMPONENT_ADD_INCLUDEDIRS ./include)
 
 # Edit following two lines to set component requirements (see docs)
 set(COMPONENT_REQUIRES )
-set(COMPONENT_PRIV_REQUIRES audio_sal audio_hal esp_dispatcher esp_peripherals display_service)
+set(COMPONENT_PRIV_REQUIRES esp_peripherals audio_sal audio_hal esp_dispatcher display_service)
 
 
 if (CONFIG_ESP_LYRAT_V4_2_BOARD)
@@ -76,6 +76,15 @@ list(APPEND COMPONENT_ADD_INCLUDEDIRS ./ai_thinker_audio_kit_v2_2)
 set(COMPONENT_SRCS
 ./ai_thinker_audio_kit_v2_2/board.c
 ./ai_thinker_audio_kit_v2_2/board_pins_config.c
+)
+endif()
+
+if (CONFIG_HAMWIFI_BOARD)
+message(STATUS "Current board name is " CONFIG_HANWIFI_BOARD)
+list(APPEND COMPONENT_ADD_INCLUDEDIRS ./hamwifi)
+set(COMPONENT_SRCS
+./hamwifi/board.c
+./hamwifi/board_pins_config.c
 )
 endif()
 
