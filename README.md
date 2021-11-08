@@ -233,9 +233,6 @@ laster , add the below code to edit the CMake file :   [components/audio_hal/CMa
 ![](static/add_ac101_cmake files.png)
 
 
-
------------------
-
 #### Step 6. Start a Project 
 
 #####  For ESP-A1S （ESP32 + ES8388 audio chips）
@@ -268,4 +265,4 @@ idf.py -p PORT [-b BAUD] flash monitor
 * The [aithinker  forum](http://bbs.ai-thinker.com/forum.php) is a place to ask questions and find community resources.
 * If you're interested in contributing to ESP-ADF, please check the [Contributions Guide](https://esp-idf.readthedocs.io/en/latest/contribute/index.html).
 * Support Email : xuhongv@aithinker.com
-* touch me: https://github.com/xuhongv
+* thanks: https://github.com/xuhongv
