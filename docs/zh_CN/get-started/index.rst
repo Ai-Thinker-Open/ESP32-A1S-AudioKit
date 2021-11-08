@@ -1,1 +1,0 @@
-.. include:: ../../en/get-started/index.rst
