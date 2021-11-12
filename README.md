@@ -22,7 +22,7 @@ The framework is also suitable for the company's official development board such
 
 ### Hardware
 
-AI Thinker boards V2.2 2957 are using A1S designs where the AC101 was replaced by the ES8388 , including:
+AI Thinker boards V2.2 974 are using A1S designs where the AC101 was replaced by the ES8388 , including:
 
 |     ESP32-A1S-Kit ES8388 Development Board（undersides）     |     ESP32-A1S-Kit AC101 Development Board（undersides）      |
 | :----------------------------------------------------------: | :----------------------------------------------------------: |
