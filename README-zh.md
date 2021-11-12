@@ -19,7 +19,7 @@ EN | [中文](./README-zh.md)
 
 ### 硬件
 
-安信可 ESP-A1S 模组 V2.2 ES8388 版本 2957 丝印已替换 AC101版本 , 区别:
+安信可 ESP-A1S 模组 V2.2 ES8388 版本 2974 丝印已替换 AC101版本 , 区别:
 
 |              ESP32-A1S-Kit ES8388 模组（背部）               |               ESP32-A1S-Kit AC101 模组（背部）               |
 | :----------------------------------------------------------: | :----------------------------------------------------------: |
@@ -28,7 +28,7 @@ EN | [中文](./README-zh.md)
 
 ### 快速开始
 
-#### Step 1. 设置 ESP-IDF 在 Windows, Linux 或Mac OS
+#### Step 1. 设置 ESP-IDF 在 Windows, Linux 或 Mac OS
 
 参考环境设置 [get-started-setup-esp-idf](https://docs.espressif.com/projects/esp-adf/en/latest/get-started/index.html#get-started-setup-esp-idf)
 
@@ -92,36 +92,28 @@ set ADF_PATH=%userprofile%\esp\esp-adf
 
 **Linux and macOS**
 
-In the terminal where you have installed ESP-IDF, run:
+在已下载的ESP-IDF文件夹里面，打开终端，并运行以下：
 
 ```
 . $HOME/esp/esp-idf/export.sh
 ```
 
-Note the space between the leading dot and the path!
+Note 注意这里面还有一个空格。
 
-You can also create an alias for the export script to your `.profile` or `.bash_profile` script. This way you can set up the environment in a new terminal window by typing `get_idf`:
+#### Step 5. 适配 ESP-A1S Module 
 
-```
-alias get_idf='. $HOME/esp/esp-idf/export.sh'
-```
+##### 对于 ESP-A1S （ESP32 + ES8388 解码芯片的）
 
-Note that it is not recommended to source `export.sh` from the profile script directly. Doing so activates IDF virtual environment in every terminal session (even in those where IDF is not needed), defeating the purpose of the virtual environment and likely affecting other software.
+- 状态: 在售
+- 解码芯片: ES8388 
 
-#### Step 5. Adapter ESP-A1S Module 
-
-##### For ESP-A1S （ESP32 + ES8388 audio chips）
-
-- status: on sale
-- audio chips: ES8388 
-
-**step 1** : alter the gpio connection ，path： ```esp-adf/components/audio_board/lyrat_v4_3/board_pins_config.c```
+**step 1** : 修改GPIO的引脚 ，地址： ```esp-adf/components/audio_board/lyrat_v4_3/board_pins_config.c```
 
 - sda_io: GPIO_33
 - scl_io: GPIO_32
 - bck_io: GPIO_NUM_27
 
-the code as here:
+修改后的代码:
 
 ```
 esp_err_t get_i2c_pins(i2c_port_t port, i2c_config_t *i2c_config)
@@ -158,12 +150,12 @@ esp_err_t get_i2s_pins(i2s_port_t port, i2s_pin_config_t *i2s_config)
 
 ----------------------
 
-##### For ESP-A1S （ESP32 + AC101 audio chips）
+##### For ESP-A1S （ESP32 + AC101 解码芯片）
 
-- status：halt production
-- audio chips: AC101
+- 状态：停产
+- 解码芯片: AC101
 
-**step 1** :  edit the component file  to add the AI Thinker Board to ESP-ADF :   [components/audio_board/component.mk](https://github.com/espressif/esp-adf/blob/master/components/audio_board/component.mk)  
+**step 1** :  编辑配置文件把 Ai-Thinker Board 开发板添加到 ESP-ADF :   [components/audio_board/component.mk](https://github.com/espressif/esp-adf/blob/master/components/audio_board/component.mk)  
 
 ```
 ifdef CONFIG_ESP_AI_THINKER_V2_2_BOARD
@@ -172,13 +164,13 @@ COMPONENT_SRCDIRS += ./ai_thinker_audio_kit_v2_2
 endif
 ```
 
-**step 2** :  add the AI Thinker Board include files to ESP-ADF , add the code form the file [ai_thinker_audio_kit_v2_2](ESP32_AC101_Driver\ai_thinker_audio_kit_v2_2):
+**step 2** :  增加头文件到 ESP-ADF ,增加这驱动文件到里面 [ai_thinker_audio_kit_v2_2](ESP32_AC101_Driver\ai_thinker_audio_kit_v2_2):
 
 ![](D:/GitHub/ESP32-A1S-AudioKit/static/add_include.png)
 
 
 
-and add the below code to edit the config file  :   [components/audio_board/CMakeLists.txt](https://github.com/espressif/esp-adf/blob/master/components/audio_board/CMakeLists.txt)  
+增加以下代码到此文件 :   [components/audio_board/CMakeLists.txt](https://github.com/espressif/esp-adf/blob/master/components/audio_board/CMakeLists.txt)  
 
 ```
 if (CONFIG_ESP_AI_THINKER_V2_2_BOARD)
@@ -191,7 +183,7 @@ set(COMPONENT_SRCS
 endif()
 ```
 
-laster , add the below code to edit the default config  :   [components/audio_board/Kconfig.projbuild](https://github.com/espressif/esp-adf/blob/master/components/audio_board/Kconfig.projbuild)  
+最后 , 增加以下代码到配置文件  :   [components/audio_board/Kconfig.projbuild](https://github.com/espressif/esp-adf/blob/master/components/audio_board/Kconfig.projbuild)  
 
 ```
 choice AUDIO_BOARD
@@ -207,18 +199,18 @@ config ESP_AI_THINKER_V2_2_BOARD
     bool "ESP32-AiThinker-audio V2.2"
 ```
 
-**step 3** :   add the AI Thinker Board AC101 driver files to ESP-ADF , add the code form the file [ac101](ESP32_AC101_Driver\ac101):
+**step 3** :  增加 AI Thinker Board AC101 驱动文件到 ESP-ADF , 驱动文件在 [ac101](ESP32_AC101_Driver\ac101):
 
 ![](D:/GitHub/ESP32-A1S-AudioKit/static/ac101_here.png)
 
-and add the below code to edit the default config  :   [components/audio_hal/component.mk](https://github.com/espressif/esp-adf/blob/master/audio_hal/component.mk)  
+然后增加以下代码到默认的配置文件  :   [components/audio_hal/component.mk](https://github.com/espressif/esp-adf/blob/master/audio_hal/component.mk)  
 
 ```
 COMPONENT_ADD_INCLUDEDIRS += ./driver/ac101
 COMPONENT_SRCDIRS += ./driver/ac101
 ```
 
-laster , add the below code to edit the CMake file :   [components/audio_hal/CMakeLists.txt](https://github.com/espressif/esp-adf/blob/master/audio_hal/CMakeLists.txt)  
+最后 , 增加以下代码到 CMake 编译文件 :   [components/audio_hal/CMakeLists.txt](https://github.com/espressif/esp-adf/blob/master/audio_hal/CMakeLists.txt)  
 
 ```
  ./driver/es8388
@@ -228,25 +220,25 @@ laster , add the below code to edit the CMake file :   [components/audio_hal/CMa
 ![](D:/GitHub/ESP32-A1S-AudioKit/static/add_ac101_cmake files.png)
 
 
-#### Step 6. Start a Project 
+#### Step 6. 开始一个工程  
 
-#####  For ESP-A1S （ESP32 + ES8388 audio chips）
+#####  For ESP-A1S （ESP32 + ES8388 解码芯片）
 
 cd ```examples/player/pipeline_bt_source``` , run ```idf.py menuconfig --- Audio Hal``` , select ```ESP32-Lyrat V4.3```
 
 <img src="D:/GitHub/ESP32-A1S-AudioKit/static/menuconfig_8388.png" width="580" align="center"/>
 
-Flash the binaries that you just built onto your board by running :
+接好USB到开发板，然后运行以下指令:
 
 ```
 idf.py -p PORT [-b BAUD] flash monitor
 ```
 
-##### For ESP-A1S （ESP32 + AC101 audio chips）
+##### For ESP-A1S （ESP32 + AC101 解码芯片）
 
 cd ```examples/player/pipeline_bt_source``` , run ```idf.py menuconfig --- Audio Hal``` , select ```ESP_AI_THINKER_V2_2_BOARD```
 
-Flash the binaries that you just built onto your board by running :
+接好USB到开发板，然后运行以下指令:
 
 ```
 idf.py -p PORT [-b BAUD] flash monitor
@@ -254,10 +246,10 @@ idf.py -p PORT [-b BAUD] flash monitor
 
 ##### 
 
-# Resources
+# 其他
 
 * [Documentation](https://docs.espressif.com/projects/esp-adf/en/latest/index.html) for the latest version of https://docs.espressif.com/projects/esp-adf/. This documentation is built from the [docs directory](docs) of this repository.
 * The [aithinker  forum](http://bbs.ai-thinker.com/forum.php) is a place to ask questions and find community resources.
 * If you're interested in contributing to ESP-ADF, please check the [Contributions Guide](https://esp-idf.readthedocs.io/en/latest/contribute/index.html).
-* Support Email : xuhongv@aithinker.com
-* thanks: https://github.com/xuhongv
+* 技术支持邮箱 : xuhongv@aithinker.com
+* 感谢: https://github.com/xuhongv
