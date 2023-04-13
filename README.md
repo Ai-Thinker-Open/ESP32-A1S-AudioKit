@@ -227,8 +227,8 @@ COMPONENT_SRCDIRS += ./driver/ac101
 laster , add the below code to edit the CMake file :   [components/audio_hal/CMakeLists.txt](https://github.com/espressif/esp-adf/blob/master/audio_hal/CMakeLists.txt)  
 
 ```
- ./driver/es8388
- ./driver/es8388/es8388.c
+ ./driver/ac101
+ ./driver/ac101/ac101.c
 ```
 
 ![](static/add_ac101_cmake files.png)
